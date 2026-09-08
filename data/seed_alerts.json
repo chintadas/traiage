@@ -1,0 +1,388 @@
+{
+  "$schema": "http://redfish.dmtf.org/schemas/v1/Event.v1_7_0.json",
+  "Id": "dc1-telemetry-event-batch-001",
+  "Name": "Data Center Raw Redfish Alert Telemetry Batch",
+  "Description": "20 realistic DMTF Redfish alerts covering power, thermal, direct liquid cooling, GPU compute, fabric network, and storage",
+  "Events": [
+    {
+      "EventId": "EVT-20260908-0001",
+      "Timestamp": "2026-09-08T06:15:22Z",
+      "Severity": "Critical",
+      "MessageId": "Thermal.1.0.CoolantLeakDetected",
+      "Message": "Liquid cooling leak detection loop #2 resistance dropped below threshold (liquid detected) at CDU manifold.",
+      "MessageArgs": ["2", "CDU manifold"],
+      "OriginOfCondition": "/redfish/v1/Chassis/dc1-row02-rack04/ThermalSubsystem/LeakDetection/Tape2",
+      "Location": {
+        "DataCenter": "DC-West-01",
+        "Room": "DataHall-A",
+        "Row": "Row-02",
+        "Rack": "Rack-04",
+        "Chassis": "CDU-Rack04",
+        "Slot": "U01-U04"
+      },
+      "Subsystem": "DirectLiquidCooling",
+      "Resolution": "Dispatch facilities technician immediately. Inspect quick-disconnect valves and manifold joints in Rack-04."
+    },
+    {
+      "EventId": "EVT-20260908-0002",
+      "Timestamp": "2026-09-08T06:15:45Z",
+      "Severity": "Critical",
+      "MessageId": "Oem.Nvidia.GpuJunctionThermalThresholdExceeded",
+      "Message": "GPU 3 (SXM5 H100) HBM3 temperature reached 98C, exceeding critical emergency throttling threshold of 95C.",
+      "MessageArgs": ["3", "SXM5 H100", "98C", "95C"],
+      "OriginOfCondition": "/redfish/v1/Systems/dc1-row02-rack04-node01/Processors/GPU3/ThermalMetrics",
+      "Location": {
+        "DataCenter": "DC-West-01",
+        "Room": "DataHall-A",
+        "Row": "Row-02",
+        "Rack": "Rack-04",
+        "Chassis": "HGX-H100-Node01",
+        "Slot": "U12-U17"
+      },
+      "Subsystem": "AI-Accelerator",
+      "Resolution": "Throttle or pause workload on node01; inspect coolant flow loop to GPU cold plate."
+    },
+    {
+      "EventId": "EVT-20260908-0003",
+      "Timestamp": "2026-09-08T06:16:02Z",
+      "Severity": "Critical",
+      "MessageId": "Oem.Nvidia.XidError",
+      "Message": "GPU 3 reported fatal XID 79: GPU has fallen off the bus. Engine reset failed.",
+      "MessageArgs": ["3", "79", "GPU has fallen off the bus"],
+      "OriginOfCondition": "/redfish/v1/Systems/dc1-row02-rack04-node01/LogServices/EventLog/Entries/XID79",
+      "Location": {
+        "DataCenter": "DC-West-01",
+        "Room": "DataHall-A",
+        "Row": "Row-02",
+        "Rack": "Rack-04",
+        "Chassis": "HGX-H100-Node01",
+        "Slot": "U12-U17"
+      },
+      "Subsystem": "AI-Accelerator",
+      "Resolution": "Drain Kubernetes node dc1-row02-rack04-node01; warm reboot host or initiate PCIe bus reset."
+    },
+    {
+      "EventId": "EVT-20260908-0004",
+      "Timestamp": "2026-09-08T06:16:30Z",
+      "Severity": "Warning",
+      "MessageId": "Thermal.1.0.FanBoostTriggered",
+      "Message": "Chassis Fan Tray 2 speed increased to 100% (18,500 RPM) due to elevated thermal delta on adjacent sled.",
+      "MessageArgs": ["Tray 2", "100%", "18500"],
+      "OriginOfCondition": "/redfish/v1/Chassis/dc1-row02-rack04-node02/Thermal/Fans/FanTray2",
+      "Location": {
+        "DataCenter": "DC-West-01",
+        "Room": "DataHall-A",
+        "Row": "Row-02",
+        "Rack": "Rack-04",
+        "Chassis": "HGX-H100-Node02",
+        "Slot": "U18-U23"
+      },
+      "Subsystem": "Cooling",
+      "Resolution": "Monitor rack ambient and cold plate inlet temperatures."
+    },
+    {
+      "EventId": "EVT-20260908-0005",
+      "Timestamp": "2026-09-08T06:20:10Z",
+      "Severity": "Critical",
+      "MessageId": "PowerSubsystem.1.0.BranchCircuitBreakerTripped",
+      "Message": "Intelligent PDU A Branch Circuit 2 breaker tripped open. Load dropped from 28.4A to 0.0A.",
+      "MessageArgs": ["PDU-A", "Branch 2", "28.4A"],
+      "OriginOfCondition": "/redfish/v1/PowerEquipment/RackPDUs/dc1-row01-rack08-pduA/Branches/Branch2",
+      "Location": {
+        "DataCenter": "DC-West-01",
+        "Room": "DataHall-A",
+        "Row": "Row-01",
+        "Rack": "Rack-08",
+        "Chassis": "ePDU-A-Left",
+        "Slot": "0U"
+      },
+      "Subsystem": "Power",
+      "Resolution": "Check total branch current draw and balance loads between Feed A and Feed B before resetting breaker."
+    },
+    {
+      "EventId": "EVT-20260908-0006",
+      "Timestamp": "2026-09-08T06:20:12Z",
+      "Severity": "Warning",
+      "MessageId": "PowerSubsystem.1.0.PowerSupplyInputLost",
+      "Message": "Power Supply 1 (PSU1) AC input voltage dropped below threshold (0V detected). Node operating on PSU2 redundancy.",
+      "MessageArgs": ["PSU1", "0V", "PSU2"],
+      "OriginOfCondition": "/redfish/v1/Chassis/dc1-row01-rack08-node01/PowerSubsystem/PowerSupplies/PSU1",
+      "Location": {
+        "DataCenter": "DC-West-01",
+        "Room": "DataHall-A",
+        "Row": "Row-01",
+        "Rack": "Rack-08",
+        "Chassis": "ComputeSled-01",
+        "Slot": "U08-U09"
+      },
+      "Subsystem": "Power",
+      "Resolution": "Verify Feed-A connection or restore upstream PDU branch circuit."
+    },
+    {
+      "EventId": "EVT-20260908-0007",
+      "Timestamp": "2026-09-08T06:20:13Z",
+      "Severity": "Warning",
+      "MessageId": "PowerSubsystem.1.0.PowerSupplyInputLost",
+      "Message": "Power Supply 1 (PSU1) AC input voltage dropped below threshold (0V detected). Node operating on PSU2 redundancy.",
+      "MessageArgs": ["PSU1", "0V", "PSU2"],
+      "OriginOfCondition": "/redfish/v1/Chassis/dc1-row01-rack08-node02/PowerSubsystem/PowerSupplies/PSU1",
+      "Location": {
+        "DataCenter": "DC-West-01",
+        "Room": "DataHall-A",
+        "Row": "Row-01",
+        "Rack": "Rack-08",
+        "Chassis": "ComputeSled-02",
+        "Slot": "U10-U11"
+      },
+      "Subsystem": "Power",
+      "Resolution": "Verify Feed-A connection or restore upstream PDU branch circuit."
+    },
+    {
+      "EventId": "EVT-20260908-0008",
+      "Timestamp": "2026-09-08T06:20:13Z",
+      "Severity": "Warning",
+      "MessageId": "PowerSubsystem.1.0.PowerSupplyInputLost",
+      "Message": "Power Supply 1 (PSU1) AC input voltage dropped below threshold (0V detected). Node operating on PSU2 redundancy.",
+      "MessageArgs": ["PSU1", "0V", "PSU2"],
+      "OriginOfCondition": "/redfish/v1/Chassis/dc1-row01-rack08-node03/PowerSubsystem/PowerSupplies/PSU1",
+      "Location": {
+        "DataCenter": "DC-West-01",
+        "Room": "DataHall-A",
+        "Row": "Row-01",
+        "Rack": "Rack-08",
+        "Chassis": "ComputeSled-03",
+        "Slot": "U12-U13"
+      },
+      "Subsystem": "Power",
+      "Resolution": "Verify Feed-A connection or restore upstream PDU branch circuit."
+    },
+    {
+      "EventId": "EVT-20260908-0009",
+      "Timestamp": "2026-09-08T06:20:14Z",
+      "Severity": "Warning",
+      "MessageId": "PowerSubsystem.1.0.PowerSupplyInputLost",
+      "Message": "Power Supply 1 (PSU1) AC input voltage dropped below threshold (0V detected). Node operating on PSU2 redundancy.",
+      "MessageArgs": ["PSU1", "0V", "PSU2"],
+      "OriginOfCondition": "/redfish/v1/Chassis/dc1-row01-rack08-node04/PowerSubsystem/PowerSupplies/PSU1",
+      "Location": {
+        "DataCenter": "DC-West-01",
+        "Room": "DataHall-A",
+        "Row": "Row-01",
+        "Rack": "Rack-08",
+        "Chassis": "ComputeSled-04",
+        "Slot": "U14-U15"
+      },
+      "Subsystem": "Power",
+      "Resolution": "Verify Feed-A connection or restore upstream PDU branch circuit."
+    },
+    {
+      "EventId": "EVT-20260908-0010",
+      "Timestamp": "2026-09-08T06:28:05Z",
+      "Severity": "Warning",
+      "MessageId": "NetworkPort.1.0.OpticalPowerDegraded",
+      "Message": "QSFP28 Transceiver on Port 1/1 optical receive power dropped to -18.4 dBm (warning threshold -16.0 dBm).",
+      "MessageArgs": ["Port 1/1", "-18.4 dBm", "-16.0 dBm"],
+      "OriginOfCondition": "/redfish/v1/Chassis/dc1-row03-rack12-tor01/NetworkAdapters/Switch1/Ports/Port1_1",
+      "Location": {
+        "DataCenter": "DC-West-01",
+        "Room": "DataHall-A",
+        "Row": "Row-03",
+        "Rack": "Rack-12",
+        "Chassis": "ToR-Switch-01",
+        "Slot": "U41-U42"
+      },
+      "Subsystem": "Network",
+      "Resolution": "Inspect fiber patch cord for micro-bends or clean MPO/LC connector faces."
+    },
+    {
+      "EventId": "EVT-20260908-0011",
+      "Timestamp": "2026-09-08T06:28:40Z",
+      "Severity": "Warning",
+      "MessageId": "NetworkPort.1.0.LinkStatusChanged",
+      "Message": "Port 1/1 physical link transition from Up to Down. High symbol error rate detected.",
+      "MessageArgs": ["Port 1/1", "Up", "Down"],
+      "OriginOfCondition": "/redfish/v1/Chassis/dc1-row03-rack12-tor01/NetworkAdapters/Switch1/Ports/Port1_1",
+      "Location": {
+        "DataCenter": "DC-West-01",
+        "Room": "DataHall-A",
+        "Row": "Row-03",
+        "Rack": "Rack-12",
+        "Chassis": "ToR-Switch-01",
+        "Slot": "U41-U42"
+      },
+      "Subsystem": "Network",
+      "Resolution": "Reseat optical module or replace failing transceiver."
+    },
+    {
+      "EventId": "EVT-20260908-0012",
+      "Timestamp": "2026-09-08T06:28:46Z",
+      "Severity": "OK",
+      "MessageId": "NetworkPort.1.0.LinkStatusChanged",
+      "Message": "Port 1/1 physical link transition from Down to Up. Autonegotiation completed at 100GbE.",
+      "MessageArgs": ["Port 1/1", "Down", "Up"],
+      "OriginOfCondition": "/redfish/v1/Chassis/dc1-row03-rack12-tor01/NetworkAdapters/Switch1/Ports/Port1_1",
+      "Location": {
+        "DataCenter": "DC-West-01",
+        "Room": "DataHall-A",
+        "Row": "Row-03",
+        "Rack": "Rack-12",
+        "Chassis": "ToR-Switch-01",
+        "Slot": "U41-U42"
+      },
+      "Subsystem": "Network",
+      "Resolution": "Monitor for port flap recurrence within 15 minutes."
+    },
+    {
+      "EventId": "EVT-20260908-0013",
+      "Timestamp": "2026-09-08T06:28:42Z",
+      "Severity": "Warning",
+      "MessageId": "NetworkInterface.1.0.HostLinkLoss",
+      "Message": "Host uplink adapter eno1 lost carrier signal. Active-backup bond failed over to eno2.",
+      "MessageArgs": ["eno1", "eno2"],
+      "OriginOfCondition": "/redfish/v1/Systems/dc1-row03-rack12-node05/EthernetInterfaces/eno1",
+      "Location": {
+        "DataCenter": "DC-West-01",
+        "Room": "DataHall-A",
+        "Row": "Row-03",
+        "Rack": "Rack-12",
+        "Chassis": "ComputeSled-05",
+        "Slot": "U16-U17"
+      },
+      "Subsystem": "Network",
+      "Resolution": "Verify link partner port state on ToR-Switch-01."
+    },
+    {
+      "EventId": "EVT-20260908-0014",
+      "Timestamp": "2026-09-08T06:33:10Z",
+      "Severity": "Critical",
+      "MessageId": "Base.1.12.MemoryECCUncorrectable",
+      "Message": "Uncorrectable multi-bit ECC error detected on CPU1 DIMM Slot A3 (DDR5 4800MHz 64GB).",
+      "MessageArgs": ["CPU1", "DIMM_A3", "Uncorrectable multi-bit ECC error"],
+      "OriginOfCondition": "/redfish/v1/Systems/dc1-row02-rack02-node07/Memory/DIMM_A3",
+      "Location": {
+        "DataCenter": "DC-West-01",
+        "Room": "DataHall-A",
+        "Row": "Row-02",
+        "Rack": "Rack-02",
+        "Chassis": "ComputeServer-07",
+        "Slot": "U20-U21"
+      },
+      "Subsystem": "Compute-Memory",
+      "Resolution": "Replace defective DIMM in socket CPU1 DIMM_A3. Run memory diagnostics."
+    },
+    {
+      "EventId": "EVT-20260908-0015",
+      "Timestamp": "2026-09-08T06:33:14Z",
+      "Severity": "Critical",
+      "MessageId": "System.1.0.FatalNMIReset",
+      "Message": "System initiated emergency NMI reboot following uncorrectable machine check architecture (MCA) exception.",
+      "MessageArgs": ["MCA Exception", "Emergency NMI"],
+      "OriginOfCondition": "/redfish/v1/Systems/dc1-row02-rack02-node07/LogServices/SEL/Entries/NMI01",
+      "Location": {
+        "DataCenter": "DC-West-01",
+        "Room": "DataHall-A",
+        "Row": "Row-02",
+        "Rack": "Rack-02",
+        "Chassis": "ComputeServer-07",
+        "Slot": "U20-U21"
+      },
+      "Subsystem": "Compute-Host",
+      "Resolution": "Isolate host from workload scheduler to prevent cascading pod restarts."
+    },
+    {
+      "EventId": "EVT-20260908-0016",
+      "Timestamp": "2026-09-08T06:37:00Z",
+      "Severity": "Warning",
+      "MessageId": "Processors.1.0.ProcessorThrottled",
+      "Message": "Processor 1 PROCHOT asserted. Frequency clamped to 1400MHz due to socket VRM temperature > 105C.",
+      "MessageArgs": ["Processor 1", "PROCHOT", "1400MHz", "105C"],
+      "OriginOfCondition": "/redfish/v1/Systems/dc1-row04-rack01-node12/Processors/CPU1",
+      "Location": {
+        "DataCenter": "DC-West-01",
+        "Room": "DataHall-A",
+        "Row": "Row-04",
+        "Rack": "Rack-01",
+        "Chassis": "ComputeServer-12",
+        "Slot": "U05-U06"
+      },
+      "Subsystem": "Compute-CPU",
+      "Resolution": "Inspect chassis baffle alignment and verify thermal grease/heat sink mounting pressure."
+    },
+    {
+      "EventId": "EVT-20260908-0017",
+      "Timestamp": "2026-09-08T06:40:19Z",
+      "Severity": "Warning",
+      "MessageId": "Storage.1.0.DrivePredictiveFailure",
+      "Message": "NVMe U.2 SSD in Drive Bay 7 SMART warning: Available spare blocks degraded to 4% (threshold 10%).",
+      "MessageArgs": ["Bay 7", "4%", "10%"],
+      "OriginOfCondition": "/redfish/v1/Chassis/dc1-row03-rack05-storage02/Drives/DriveBay7",
+      "Location": {
+        "DataCenter": "DC-West-01",
+        "Room": "DataHall-A",
+        "Row": "Row-03",
+        "Rack": "Rack-05",
+        "Chassis": "StorageArray-02",
+        "Slot": "U15-U18"
+      },
+      "Subsystem": "Storage",
+      "Resolution": "Schedule hot-swap replacement of Drive Bay 7 before spare exhaustion reaches 0%."
+    },
+    {
+      "EventId": "EVT-20260908-0018",
+      "Timestamp": "2026-09-08T06:40:22Z",
+      "Severity": "Warning",
+      "MessageId": "Storage.1.0.VolumeDegraded",
+      "Message": "RAID-6 Volume 'Pool01-Data' status transitioned to Degraded. Hot spare drive Bay 24 allocated for rebuild.",
+      "MessageArgs": ["Pool01-Data", "Degraded", "Bay 24"],
+      "OriginOfCondition": "/redfish/v1/Storage/StorageController1/Volumes/Pool01-Data",
+      "Location": {
+        "DataCenter": "DC-West-01",
+        "Room": "DataHall-A",
+        "Row": "Row-03",
+        "Rack": "Rack-05",
+        "Chassis": "StorageArray-02",
+        "Slot": "U15-U18"
+      },
+      "Subsystem": "Storage",
+      "Resolution": "Rebuild in progress (12% complete). Do not remove other drives until rebuild finishes."
+    },
+    {
+      "EventId": "EVT-20260908-0019",
+      "Timestamp": "2026-09-08T06:44:00Z",
+      "Severity": "Warning",
+      "MessageId": "Thermal.1.0.RackInletExceedsEnvelope",
+      "Message": "Environmental rack inlet sensor 1 reported 31.5C, breaching ASHRAE A2 recommended limit (27.0C).",
+      "MessageArgs": ["Sensor 1", "31.5C", "27.0C"],
+      "OriginOfCondition": "/redfish/v1/Chassis/dc1-row01-rack01/Sensors/InletTemp1",
+      "Location": {
+        "DataCenter": "DC-West-01",
+        "Room": "DataHall-A",
+        "Row": "Row-01",
+        "Rack": "Rack-01",
+        "Chassis": "RackFrame-01",
+        "Slot": "Top-Inlet"
+      },
+      "Subsystem": "Facility-Environmental",
+      "Resolution": "Inspect cold aisle containment door closure and CRAH unit #4 supply airflow."
+    },
+    {
+      "EventId": "EVT-20260908-0020",
+      "Timestamp": "2026-09-08T06:50:00Z",
+      "Severity": "OK",
+      "MessageId": "Update.1.0.FirmwareUpdatePendingReboot",
+      "Message": "BMC firmware image version 3.4.1 staged successfully. Activation pending next scheduled maintenance reboot.",
+      "MessageArgs": ["BMC", "3.4.1"],
+      "OriginOfCondition": "/redfish/v1/UpdateService/FirmwareInventory/BMC_Firmware",
+      "Location": {
+        "DataCenter": "DC-West-01",
+        "Room": "DataHall-A",
+        "Row": "Row-04",
+        "Rack": "Rack-10",
+        "Chassis": "ComputeServer-03",
+        "Slot": "U08-U09"
+      },
+      "Subsystem": "Management-BMC",
+      "Resolution": "No immediate action required. Pending scheduled reboot window."
+    }
+  ]
+}
