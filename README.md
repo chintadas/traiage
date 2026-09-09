@@ -95,11 +95,13 @@ traiage/
 ├── src/
 │   ├── models.py                 # Pydantic schemas (RedfishAlert, AlertStats)
 │   ├── server.py                 # FastAPI backend & static file server
-│   └── graph.py                  # Topological dependency graph engine & RCA
+│   ├── graph.py                  # Topological dependency graph engine & RCA
+│   └── triage_engine.py          # Incident correlation & hypothesis engine
 ├── tests/
 │   ├── test_dataset.py           # Redfish schema and data integrity tests
 │   ├── test_api.py               # REST API filtering and sort tests
 │   ├── test_graph.py             # Graph traversal, blast radius & path tests
+│   ├── test_triage_engine.py     # Incident clustering & hypothesis tests
 │   └── test_app.test.js          # Frontend unit tests (Node.js test runner)
 ├── package.json                  # Frontend npm scripts configuration
 └── README.md
