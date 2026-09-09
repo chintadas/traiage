@@ -86,17 +86,20 @@ node --test tests/test_app.test.js
 traiage/
 ├── data/
 │   ├── seed_alerts.json          # 20 raw DMTF Redfish alert records
-│   └── DATASET_INSPECTION.md     # Detailed event breakdown and cluster guide
+│   ├── DATASET_INSPECTION.md     # Detailed event breakdown and cluster guide
+│   └── topology.json             # Multi-plane topological dependency graph
 ├── public/
 │   ├── index.html                # Telemetry dashboard HTML layout
 │   ├── styles.css                # Datacenter operations dark aesthetic
 │   └── app.js                    # Filter, search, and inspector controller
 ├── src/
 │   ├── models.py                 # Pydantic schemas (RedfishAlert, AlertStats)
-│   └── server.py                 # FastAPI backend & static file server
+│   ├── server.py                 # FastAPI backend & static file server
+│   └── graph.py                  # Topological dependency graph engine & RCA
 ├── tests/
 │   ├── test_dataset.py           # Redfish schema and data integrity tests
 │   ├── test_api.py               # REST API filtering and sort tests
+│   ├── test_graph.py             # Graph traversal, blast radius & path tests
 │   └── test_app.test.js          # Frontend unit tests (Node.js test runner)
 ├── package.json                  # Frontend npm scripts configuration
 └── README.md
