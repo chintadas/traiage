@@ -45,7 +45,6 @@ const kpiTotal = document.getElementById('kpiTotal');
 const kpiCritical = document.getElementById('kpiCritical');
 const kpiWarning = document.getElementById('kpiWarning');
 const kpiOk = document.getElementById('kpiOk');
-const kpiRacks = document.getElementById('kpiRacks');
 const kpiCards = document.querySelectorAll('.kpi-card[data-severity-filter]');
 
 // Initialize Application
@@ -66,7 +65,6 @@ async function loadStats() {
     kpiCritical.textContent = statsData.critical;
     kpiWarning.textContent = statsData.warning;
     kpiOk.textContent = statsData.ok;
-    kpiRacks.textContent = statsData.racks_affected;
     totalCountEl.textContent = statsData.total;
     tabRawCountEl.textContent = statsData.total;
 
