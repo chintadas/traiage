@@ -15,40 +15,48 @@ const filterState = {
 };
 
 // DOM Elements
-const tableBody = document.getElementById('alertsTableBody');
-const visibleCountEl = document.getElementById('visibleCount');
-const totalCountEl = document.getElementById('totalCount');
-const tabRawCountEl = document.getElementById('tabRawCount');
-const activeChipsEl = document.getElementById('activeChips');
-const emptyStateEl = document.getElementById('emptyState');
-const alertsTableEl = document.getElementById('alertsTable');
+let tableBody, visibleCountEl, totalCountEl, tabRawCountEl, activeChipsEl, emptyStateEl, alertsTableEl;
+let searchInput, clearSearchBtn, filterSeverity, filterSubsystem, filterRack, sortBySelect, resetFiltersBtn, emptyResetBtn;
+let inspectorDrawer, drawerBackdrop, drawerEventId, drawerContent, closeDrawerBtn, toastNotification;
+let kpiTotal, kpiCritical, kpiWarning, kpiOk, kpiCards;
 
-const searchInput = document.getElementById('searchInput');
-const clearSearchBtn = document.getElementById('clearSearchBtn');
-const filterSeverity = document.getElementById('filterSeverity');
-const filterSubsystem = document.getElementById('filterSubsystem');
-const filterRack = document.getElementById('filterRack');
-const sortBySelect = document.getElementById('sortBy');
-const resetFiltersBtn = document.getElementById('resetFiltersBtn');
-const emptyResetBtn = document.getElementById('emptyResetBtn');
+function initDomElements() {
+  if (typeof document === 'undefined') return;
 
-// Inspector Elements
-const inspectorDrawer = document.getElementById('inspectorDrawer');
-const drawerBackdrop = document.getElementById('drawerBackdrop');
-const drawerEventId = document.getElementById('drawerEventId');
-const drawerContent = document.getElementById('drawerContent');
-const closeDrawerBtn = document.getElementById('closeDrawerBtn');
-const toastNotification = document.getElementById('toastNotification');
+  tableBody = document.getElementById('alertsTableBody');
+  visibleCountEl = document.getElementById('visibleCount');
+  totalCountEl = document.getElementById('totalCount');
+  tabRawCountEl = document.getElementById('tabRawCount');
+  activeChipsEl = document.getElementById('activeChips');
+  emptyStateEl = document.getElementById('emptyState');
+  alertsTableEl = document.getElementById('alertsTable');
 
-// KPI Elements
-const kpiTotal = document.getElementById('kpiTotal');
-const kpiCritical = document.getElementById('kpiCritical');
-const kpiWarning = document.getElementById('kpiWarning');
-const kpiOk = document.getElementById('kpiOk');
-const kpiCards = document.querySelectorAll('.kpi-card[data-severity-filter]');
+  searchInput = document.getElementById('searchInput');
+  clearSearchBtn = document.getElementById('clearSearchBtn');
+  filterSeverity = document.getElementById('filterSeverity');
+  filterSubsystem = document.getElementById('filterSubsystem');
+  filterRack = document.getElementById('filterRack');
+  sortBySelect = document.getElementById('sortBy');
+  resetFiltersBtn = document.getElementById('resetFiltersBtn');
+  emptyResetBtn = document.getElementById('emptyResetBtn');
+
+  inspectorDrawer = document.getElementById('inspectorDrawer');
+  drawerBackdrop = document.getElementById('drawerBackdrop');
+  drawerEventId = document.getElementById('drawerEventId');
+  drawerContent = document.getElementById('drawerContent');
+  closeDrawerBtn = document.getElementById('closeDrawerBtn');
+  toastNotification = document.getElementById('toastNotification');
+
+  kpiTotal = document.getElementById('kpiTotal');
+  kpiCritical = document.getElementById('kpiCritical');
+  kpiWarning = document.getElementById('kpiWarning');
+  kpiOk = document.getElementById('kpiOk');
+  kpiCards = document.querySelectorAll('.kpi-card[data-severity-filter]');
+}
 
 // Initialize Application
 async function init() {
+  initDomElements();
   setupEventListeners();
   await loadStats();
   await loadAlerts();
@@ -104,27 +112,28 @@ async function loadAlerts() {
 }
 
 // Apply Filters & Search & Sort
-function applyFilters() {
-  let result = [...allAlerts];
+// Pure Filter Logic
+function filterAlerts(alerts, state) {
+  let result = [...alerts];
 
   // Severity
-  if (filterState.severity !== 'all') {
-    result = result.filter(a => a.Severity.toLowerCase() === filterState.severity.toLowerCase());
+  if (state.severity && state.severity !== 'all') {
+    result = result.filter(a => a.Severity.toLowerCase() === state.severity.toLowerCase());
   }
 
   // Subsystem
-  if (filterState.subsystem !== 'all') {
-    result = result.filter(a => a.Subsystem.toLowerCase() === filterState.subsystem.toLowerCase());
+  if (state.subsystem && state.subsystem !== 'all') {
+    result = result.filter(a => a.Subsystem.toLowerCase() === state.subsystem.toLowerCase());
   }
 
   // Rack
-  if (filterState.rack !== 'all') {
-    result = result.filter(a => (a.Location?.Rack || '').toLowerCase() === filterState.rack.toLowerCase());
+  if (state.rack && state.rack !== 'all') {
+    result = result.filter(a => (a.Location?.Rack || '').toLowerCase() === state.rack.toLowerCase());
   }
 
   // Search
-  if (filterState.search) {
-    const q = filterState.search.toLowerCase().trim();
+  if (state.search) {
+    const q = state.search.toLowerCase().trim();
     result = result.filter(a => {
       const corpus = [
         a.EventId,
@@ -140,20 +149,32 @@ function applyFilters() {
     });
   }
 
-  // Sort
+  return result;
+}
+
+// Pure Sort Logic
+function sortAlerts(alerts, sortBy = 'timestamp-desc') {
+  const result = [...alerts];
   const severityScore = { critical: 3, warning: 2, ok: 1 };
-  if (filterState.sortBy === 'severity-desc') {
+
+  if (sortBy === 'severity-desc') {
     result.sort((a, b) => (severityScore[b.Severity.toLowerCase()] || 0) - (severityScore[a.Severity.toLowerCase()] || 0));
-  } else if (filterState.sortBy === 'rack-asc') {
+  } else if (sortBy === 'rack-asc') {
     result.sort((a, b) => (a.Location?.Rack || '').localeCompare(b.Location?.Rack || ''));
-  } else if (filterState.sortBy === 'timestamp-asc') {
+  } else if (sortBy === 'timestamp-asc') {
     result.sort((a, b) => new Date(a.Timestamp) - new Date(b.Timestamp));
   } else {
     // timestamp-desc (default)
     result.sort((a, b) => new Date(b.Timestamp) - new Date(a.Timestamp));
   }
 
-  filteredAlerts = result;
+  return result;
+}
+
+// Apply Filters & Search & Sort
+function applyFilters() {
+  const filtered = filterAlerts(allAlerts, filterState);
+  filteredAlerts = sortAlerts(filtered, filterState.sortBy);
   renderTable();
   renderActiveChips();
   updateKPIHighlight();
@@ -182,8 +203,16 @@ function renderTable() {
     return `
       <tr class="row-${sevClass}" onclick="openInspector('${alert.EventId}')">
         <td>
-          <div style="font-family: var(--font-mono); font-size: 0.8rem; color: #e5e7eb;">${timeFormatted.time}</div>
-          <div style="font-size: 0.7rem; color: var(--text-muted);">${timeFormatted.date}</div>
+          <div style="font-weight: 600; color: #f3f4f6; font-size: 0.82rem; display: flex; align-items: center; gap: 0.35rem;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--color-cyan); flex-shrink: 0;">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            ${timeFormatted.relative}
+          </div>
+          <div style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted); margin-top: 0.15rem;">
+            ${timeFormatted.time} • ${timeFormatted.date}
+          </div>
         </td>
         <td>
           <span class="badge-severity ${sevClass}">
@@ -318,7 +347,7 @@ function openInspector(eventId) {
         <div class="drawer-v">${escapeHtml(alert.MessageId)}</div>
 
         <div class="drawer-k">Timestamp:</div>
-        <div class="drawer-v">${alert.Timestamp}</div>
+        <div class="drawer-v">${alert.Timestamp} <span style="color: var(--color-cyan); font-family: var(--font-sans); font-size: 0.78rem;">(${formatRelativeTime(alert.Timestamp)})</span></div>
 
         <div class="drawer-k">Physical Location:</div>
         <div class="drawer-v">${loc.DataCenter} / ${loc.Room} / ${loc.Row} / ${loc.Rack}</div>
@@ -455,15 +484,40 @@ function setupEventListeners() {
 }
 
 // Helpers
-function formatTime(isoString) {
+function formatRelativeTime(isoString, nowMs = Date.now()) {
+  const alertTime = new Date(isoString).getTime();
+  const diffSec = Math.max(0, Math.floor((nowMs - alertTime) / 1000));
+
+  if (diffSec < 60) {
+    return 'just now';
+  }
+
+  const totalMin = Math.floor(diffSec / 60);
+  if (totalMin < 60) {
+    return `${totalMin}m ago`;
+  }
+
+  const totalHours = Math.floor(totalMin / 60);
+  const remMin = totalMin % 60;
+  if (totalHours < 24) {
+    return remMin > 0 ? `${totalHours}h ${remMin}m ago` : `${totalHours}h ago`;
+  }
+
+  const days = Math.floor(totalHours / 24);
+  const remHours = totalHours % 24;
+  return remHours > 0 ? `${days}d ${remHours}h ago` : `${days}d ago`;
+}
+
+function formatTime(isoString, nowMs = Date.now()) {
   const d = new Date(isoString);
   const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
   const date = d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
-  return { time, date };
+  const relative = formatRelativeTime(isoString, nowMs);
+  return { time, date, relative };
 }
 
 function escapeHtml(str) {
-  if (!str) return '';
+  if (str === null || str === undefined) return '';
   return String(str)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -472,5 +526,25 @@ function escapeHtml(str) {
     .replace(/'/g, '&#039;');
 }
 
-// Boot
-window.addEventListener('DOMContentLoaded', init);
+// Browser Initialization
+if (typeof window !== 'undefined') {
+  window.addEventListener('DOMContentLoaded', init);
+
+  // Auto-refresh relative time every 30 seconds
+  setInterval(() => {
+    if (typeof filteredAlerts !== 'undefined' && filteredAlerts && filteredAlerts.length > 0) {
+      renderTable();
+    }
+  }, 30000);
+}
+
+// Node.js module export for unit testing
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    formatRelativeTime,
+    formatTime,
+    escapeHtml,
+    filterAlerts,
+    sortAlerts
+  };
+}

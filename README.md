@@ -53,17 +53,29 @@ Once started, open your browser and navigate to:
 
 ## Running the Tests
 
-Execute the automated test suite using `pytest`:
+### 1. Python Backend & Dataset Tests (pytest)
+Execute the Python test suite validating Redfish schema compliance and FastAPI endpoints:
 
 ```bash
-# Run all tests with verbose output
+# Run all Python tests with verbose output
 python3 -m pytest -v
 
-# Run only dataset integrity and Redfish schema tests
+# Run dataset integrity tests
 python3 -m pytest tests/test_dataset.py -v
 
-# Run only API endpoint and filter tests
+# Run API endpoint and filter tests
 python3 -m pytest tests/test_api.py -v
+```
+
+### 2. Frontend Unit Tests (Node.js)
+Execute the JavaScript unit test suite validating relative age formatting (`formatRelativeTime`), HTML escaping, filtering, and sorting:
+
+```bash
+# Using npm
+npm test
+
+# Or directly with Node's built-in test runner
+node --test tests/test_app.test.js
 ```
 
 ---
@@ -84,6 +96,8 @@ traiage/
 │   └── server.py                 # FastAPI backend & static file server
 ├── tests/
 │   ├── test_dataset.py           # Redfish schema and data integrity tests
-│   └── test_api.py               # REST API filtering and sort tests
+│   ├── test_api.py               # REST API filtering and sort tests
+│   └── test_app.test.js          # Frontend unit tests (Node.js test runner)
+├── package.json                  # Frontend npm scripts configuration
 └── README.md
 ```
