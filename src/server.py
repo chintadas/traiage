@@ -134,6 +134,74 @@ def get_stats():
         racks=racks
     )
 
+from src.triage_engine import TriageEngine, Incident
+from pydantic import BaseModel
+
+class IncidentStatusUpdate(BaseModel):
+    status: str
+
+# Shared in-memory engine instance
+triage_engine = TriageEngine()
+
+@app.get("/api/incidents")
+def get_incidents(
+    priority: Optional[str] = Query(None, description="Filter by priority: P1, P2, P3, P4"),
+    category: Optional[str] = Query(None, description="Filter by category"),
+    status: Optional[str] = Query(None, description="Filter by status: Active, Acknowledged, Resolved"),
+    search: Optional[str] = Query(None, description="Search in title, hypothesis, or location")
+):
+    if not triage_engine.incidents:
+        triage_engine.correlate()
+    
+    results = triage_engine.incidents
+
+    # Priority filter
+    if priority and priority.lower() != "all":
+        results = [inc for inc in results if inc.priority.lower() == priority.lower()]
+
+    # Category filter
+    if category and category.lower() != "all":
+        results = [inc for inc in results if inc.category.lower() == category.lower()]
+
+    # Status filter
+    if status and status.lower() != "all":
+        results = [inc for inc in results if inc.status.lower() == status.lower()]
+
+    # Search filter
+    if search:
+        s = search.lower().strip()
+        filtered = []
+        for inc in results:
+            corpus = f"{inc.id} {inc.title} {inc.root_cause_hypothesis} {inc.root_cause_location} {inc.category} {inc.dispatch_target}".lower()
+            if s in corpus:
+                filtered.append(inc)
+        results = filtered
+
+    return {
+        "count": len(results),
+        "total": len(triage_engine.incidents),
+        "incidents": [inc.model_dump() for inc in results]
+    }
+
+@app.get("/api/incidents/{incident_id}")
+def get_incident_by_id(incident_id: str):
+    if not triage_engine.incidents:
+        triage_engine.correlate()
+    for inc in triage_engine.incidents:
+        if inc.id.lower() == incident_id.lower():
+            return inc.model_dump()
+    raise HTTPException(status_code=404, detail=f"Incident '{incident_id}' not found")
+
+@app.post("/api/incidents/{incident_id}/status")
+def update_incident_status(incident_id: str, payload: IncidentStatusUpdate):
+    if not triage_engine.incidents:
+        triage_engine.correlate()
+    for inc in triage_engine.incidents:
+        if inc.id.lower() == incident_id.lower():
+            inc.status = payload.status
+            return inc.model_dump()
+    raise HTTPException(status_code=404, detail=f"Incident '{incident_id}' not found")
+
 if PUBLIC_DIR.exists():
     app.mount("/", StaticFiles(directory=str(PUBLIC_DIR), html=True), name="public")
 

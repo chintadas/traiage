@@ -8,7 +8,8 @@ const {
   formatTime,
   escapeHtml,
   filterAlerts,
-  sortAlerts
+  sortAlerts,
+  filterIncidents
 } = require('../public/app.js');
 
 // Load seed alerts for integration testing of filter and sort logic
@@ -153,4 +154,96 @@ test('sortAlerts: sorts by rack alphabetically ascending', () => {
     const rNext = sorted[i + 1].Location.Rack || '';
     assert.ok(rCurrent.localeCompare(rNext) <= 0);
   }
+});
+
+// Incidents Filtering Tests
+const sampleIncidents = [
+  {
+    id: 'INC-DLC-2026-001',
+    priority: 'P1',
+    category: 'LiquidCooling',
+    status: 'Active',
+    title: 'CRITICAL: Direct Liquid Cooling Pressure Loss Triggering Thermal Throttling',
+    root_cause_hypothesis: 'Pressure loss in Coolant Distribution Unit CDU-Row01-A',
+    root_cause_component: 'CDU-Row01-A',
+    root_cause_location: 'Room: DC-North-1, Row: Row-01',
+    dispatch_target: 'Facilities Mechanical Team',
+    blast_radius_summary: '1 CDU, 1 Manifold'
+  },
+  {
+    id: 'INC-PWR-2026-002',
+    priority: 'P2',
+    category: 'Power',
+    status: 'Acknowledged',
+    title: 'MAJOR: PDU Branch Circuit Breaker Trip Causing Power Redundancy Loss (N-1)',
+    root_cause_hypothesis: 'Branch circuit breaker trip on PDU-Row01-A',
+    root_cause_component: 'PDU-Row01-A-Branch-04',
+    root_cause_location: 'Room: DC-North-1, Row: Row-01, Rack: Rack-02',
+    dispatch_target: 'Facilities Electrical Team',
+    blast_radius_summary: '1 PDU Branch'
+  },
+  {
+    id: 'INC-NET-2026-003',
+    priority: 'P2',
+    category: 'NetworkFabric',
+    status: 'Resolved',
+    title: 'MAJOR: ToR Switch Fan Tray Failure Causing Thermal Rise',
+    root_cause_hypothesis: 'Dual fan tray failure on Switch-ToR-R04-01',
+    root_cause_component: 'Switch-ToR-R04-01',
+    root_cause_location: 'Room: DC-North-1, Row: Row-01, Rack: Rack-04',
+    dispatch_target: 'Network Operations Team',
+    blast_radius_summary: '1 ToR Switch'
+  },
+  {
+    id: 'INC-STR-2026-004',
+    priority: 'P3',
+    category: 'Storage',
+    status: 'Active',
+    title: 'MINOR: NVMe Storage Drive Failure Causing Degraded RAID Volume',
+    root_cause_hypothesis: 'Drive failure in StorageArray-02',
+    root_cause_component: 'StorageArray-02',
+    root_cause_location: 'Room: DC-North-1, Row: Row-01, Rack: Rack-08',
+    dispatch_target: 'Data Center Hardware Logistics',
+    blast_radius_summary: '1 Storage Array'
+  }
+];
+
+test('filterIncidents: filters by priority', () => {
+  const p1s = filterIncidents(sampleIncidents, { priority: 'P1' });
+  assert.strictEqual(p1s.length, 1);
+  assert.strictEqual(p1s[0].id, 'INC-DLC-2026-001');
+
+  const p2s = filterIncidents(sampleIncidents, { priority: 'P2' });
+  assert.strictEqual(p2s.length, 2);
+});
+
+test('filterIncidents: filters by category', () => {
+  const cooling = filterIncidents(sampleIncidents, { category: 'LiquidCooling' });
+  assert.strictEqual(cooling.length, 1);
+  assert.strictEqual(cooling[0].category, 'LiquidCooling');
+
+  const storage = filterIncidents(sampleIncidents, { category: 'Storage' });
+  assert.strictEqual(storage.length, 1);
+  assert.strictEqual(storage[0].id, 'INC-STR-2026-004');
+});
+
+test('filterIncidents: filters by status', () => {
+  const active = filterIncidents(sampleIncidents, { status: 'Active' });
+  assert.strictEqual(active.length, 2);
+
+  const acked = filterIncidents(sampleIncidents, { status: 'Acknowledged' });
+  assert.strictEqual(acked.length, 1);
+  assert.strictEqual(acked[0].id, 'INC-PWR-2026-002');
+});
+
+test('filterIncidents: free text search matches title, hypothesis, component, dispatch', () => {
+  const cduMatch = filterIncidents(sampleIncidents, { search: 'CDU-Row01-A' });
+  assert.strictEqual(cduMatch.length, 1);
+
+  const electricalMatch = filterIncidents(sampleIncidents, { search: 'electrical' });
+  assert.strictEqual(electricalMatch.length, 1);
+  assert.strictEqual(electricalMatch[0].id, 'INC-PWR-2026-002');
+
+  const raidMatch = filterIncidents(sampleIncidents, { search: 'RAID' });
+  assert.strictEqual(raidMatch.length, 1);
 });

@@ -106,3 +106,35 @@ def test_static_index_page():
     assert response.status_code == 200
     assert "TRAIAGE" in response.text
     assert "Raw Alerts View" in response.text
+
+def test_get_incidents():
+    response = client.get("/api/incidents")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] > 0
+    assert len(data["incidents"]) > 0
+    # First incident should be P1
+    assert data["incidents"][0]["priority"] == "P1"
+
+def test_filter_incidents_by_priority():
+    response = client.get("/api/incidents?priority=P1")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["count"] >= 1
+    for inc in data["incidents"]:
+        assert inc["priority"] == "P1"
+
+def test_update_incident_status():
+    response = client.get("/api/incidents")
+    inc_id = response.json()["incidents"][0]["id"]
+
+    # Update status to Acknowledged
+    update_res = client.post(f"/api/incidents/{inc_id}/status", json={"status": "Acknowledged"})
+    assert update_res.status_code == 200
+    assert update_res.json()["status"] == "Acknowledged"
+
+    # Verify single fetch returns updated status
+    fetch_res = client.get(f"/api/incidents/{inc_id}")
+    assert fetch_res.status_code == 200
+    assert fetch_res.json()["status"] == "Acknowledged"
+

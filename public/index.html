@@ -42,13 +42,13 @@
         <span class="tab-badge" id="tabRawCount">20</span>
       </button>
 
-      <button class="view-tab disabled" id="tabGroupedAlerts" title="Next step in Phase 1: Grouping & Correlation Engine">
+      <button class="view-tab" id="tabGroupedAlerts" title="Correlated Incidents View">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
           <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
         </svg>
         Grouped Incidents View
-        <span class="tab-badge-phase">Phase 1B</span>
+        <span class="tab-badge" id="tabGroupedCount" style="background: rgba(139, 92, 246, 0.25); color: #c4b5fd;">--</span>
       </button>
     </div>
 
@@ -61,6 +61,9 @@
 
   <!-- Main Container -->
   <main class="dashboard-container">
+
+    <!-- VIEW 1: RAW ALERTS -->
+    <section id="rawAlertsView" class="view-panel active">
 
     <!-- KPI Metric Cards -->
     <section class="kpi-grid">
@@ -192,6 +195,123 @@
         <button id="emptyResetBtn" class="btn-primary">Clear All Filters</button>
       </div>
     </div>
+    </section> <!-- End rawAlertsView -->
+
+    <!-- VIEW 2: GROUPED INCIDENTS -->
+    <section id="groupedIncidentsView" class="view-panel" style="display: none;">
+      <!-- Incidents KPI Ribbon -->
+      <section class="kpi-grid">
+        <div class="kpi-card" data-priority-filter="all">
+          <div class="kpi-label">CORRELATED INCIDENTS</div>
+          <div class="kpi-val" id="kpiIncTotal">--</div>
+          <div class="kpi-meta">Collapsing 20 raw alerts</div>
+        </div>
+        <div class="kpi-card kpi-critical" data-priority-filter="P1">
+          <div class="kpi-label">
+            <span class="alert-pulse red"></span>
+            P1 CRITICAL INCIDENTS
+          </div>
+          <div class="kpi-val text-red" id="kpiIncP1">--</div>
+          <div class="kpi-meta">Thermal runaway / Liquid leak</div>
+        </div>
+        <div class="kpi-card kpi-warning" data-priority-filter="P2">
+          <div class="kpi-label">
+            <span class="alert-pulse amber"></span>
+            P2 MAJOR INCIDENTS
+          </div>
+          <div class="kpi-val text-amber" id="kpiIncP2">--</div>
+          <div class="kpi-meta">Redundancy loss (N-1 degraded)</div>
+        </div>
+        <div class="kpi-card" data-priority-filter="P3" style="border-color: rgba(6, 182, 212, 0.35);">
+          <div class="kpi-label">P3 MINOR INCIDENTS</div>
+          <div class="kpi-val text-cyan" id="kpiIncP3">--</div>
+          <div class="kpi-meta">Transparent rebuild / clamp</div>
+        </div>
+      </section>
+
+      <!-- Incident Filters Toolbar -->
+      <section class="filter-panel">
+        <div class="search-box">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="text" id="incSearchInput" placeholder="Search incidents by title, hypothesis, root cause, or dispatch playbook...">
+          <button id="clearIncSearchBtn" class="clear-btn" style="display:none;">&times;</button>
+        </div>
+
+        <div class="filter-controls">
+          <div class="filter-group">
+            <label for="filterIncPriority">Priority</label>
+            <select id="filterIncPriority">
+              <option value="all">All Priorities</option>
+              <option value="P1">P1 - Critical</option>
+              <option value="P2">P2 - Major</option>
+              <option value="P3">P3 - Minor</option>
+              <option value="P4">P4 - Info</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label for="filterIncCategory">Category</label>
+            <select id="filterIncCategory">
+              <option value="all">All Categories</option>
+              <option value="LiquidCooling">Direct Liquid Cooling</option>
+              <option value="Power">Power Distribution</option>
+              <option value="NetworkFabric">Network Fabric</option>
+              <option value="ComputeHost">Compute Host</option>
+              <option value="Storage">Storage</option>
+              <option value="Environmental">Environmental</option>
+              <option value="Management">Management</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label for="filterIncStatus">Status</label>
+            <select id="filterIncStatus">
+              <option value="all">All Statuses</option>
+              <option value="Active">Active</option>
+              <option value="Acknowledged">Acknowledged</option>
+              <option value="Resolved">Resolved</option>
+            </select>
+          </div>
+
+          <button id="resetIncFiltersBtn" class="btn-reset" title="Reset incident filters">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+              <path d="M3 3v5h5"></path>
+            </svg>
+            Reset
+          </button>
+        </div>
+      </section>
+
+      <!-- Incidents Results Header -->
+      <div class="results-header">
+        <div class="results-count">
+          Showing <span id="visibleIncCount" class="highlight">--</span> of <span id="totalIncCount">--</span> correlated incidents
+          <span style="color: var(--text-muted); font-size: 0.78rem; margin-left: 0.5rem;">(collapsing 20 raw alerts via topology graph)</span>
+        </div>
+        <div class="active-chips" id="activeIncChips"></div>
+      </div>
+
+      <!-- Incidents Feed Container -->
+      <div id="incidentsList" class="incidents-container">
+        <!-- Rendered by JavaScript -->
+      </div>
+
+      <!-- Empty State for Incidents -->
+      <div id="emptyIncState" class="empty-state" style="display: none;">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        <h3>No incidents match your current filters</h3>
+        <p>Try adjusting your search query, priority, or category filters.</p>
+        <button id="emptyIncResetBtn" class="btn-primary">Clear All Filters</button>
+      </div>
+    </section>
   </main>
 
   <!-- Slide-out Drawer: Redfish Resource Inspector -->

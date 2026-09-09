@@ -1,11 +1,11 @@
-// TRAIAGE - Raw Alerts View Controller
+// TRAIAGE - Alert & Incident Triage Controller
 
 let allAlerts = [];
 let filteredAlerts = [];
 let selectedAlert = null;
 let statsData = null;
 
-// Filter State
+// Raw Alerts Filter State
 const filterState = {
   severity: 'all',
   subsystem: 'all',
@@ -14,19 +14,46 @@ const filterState = {
   sortBy: 'timestamp-desc'
 };
 
-// DOM Elements
-let tableBody, visibleCountEl, totalCountEl, tabRawCountEl, activeChipsEl, emptyStateEl, alertsTableEl;
+// Incidents State & Filter
+let allIncidents = [];
+let filteredIncidents = [];
+const incFilterState = {
+  priority: 'all',
+  category: 'all',
+  status: 'all',
+  search: ''
+};
+
+// DOM Elements: Common & Tabs
+let tabRawAlerts, tabGroupedAlerts, tabRawCountEl, tabGroupedCountEl;
+let rawAlertsView, groupedIncidentsView;
+
+// DOM Elements: Raw Alerts
+let tableBody, visibleCountEl, totalCountEl, activeChipsEl, emptyStateEl, alertsTableEl;
 let searchInput, clearSearchBtn, filterSeverity, filterSubsystem, filterRack, sortBySelect, resetFiltersBtn, emptyResetBtn;
 let inspectorDrawer, drawerBackdrop, drawerEventId, drawerContent, closeDrawerBtn, toastNotification;
 let kpiTotal, kpiCritical, kpiWarning, kpiOk, kpiCards;
 
+// DOM Elements: Grouped Incidents
+let kpiIncTotal, kpiIncP1, kpiIncP2, kpiIncP3, kpiIncCards;
+let incSearchInput, clearIncSearchBtn, filterIncPriority, filterIncCategory, filterIncStatus, resetIncFiltersBtn, emptyIncResetBtn;
+let visibleIncCountEl, totalIncCountEl, activeIncChipsEl, incidentsListEl, emptyIncStateEl;
+
 function initDomElements() {
   if (typeof document === 'undefined') return;
 
+  // View Tabs
+  tabRawAlerts = document.getElementById('tabRawAlerts');
+  tabGroupedAlerts = document.getElementById('tabGroupedAlerts');
+  tabRawCountEl = document.getElementById('tabRawCount');
+  tabGroupedCountEl = document.getElementById('tabGroupedCount');
+  rawAlertsView = document.getElementById('rawAlertsView');
+  groupedIncidentsView = document.getElementById('groupedIncidentsView');
+
+  // Raw Alerts View Elements
   tableBody = document.getElementById('alertsTableBody');
   visibleCountEl = document.getElementById('visibleCount');
   totalCountEl = document.getElementById('totalCount');
-  tabRawCountEl = document.getElementById('tabRawCount');
   activeChipsEl = document.getElementById('activeChips');
   emptyStateEl = document.getElementById('emptyState');
   alertsTableEl = document.getElementById('alertsTable');
@@ -52,6 +79,27 @@ function initDomElements() {
   kpiWarning = document.getElementById('kpiWarning');
   kpiOk = document.getElementById('kpiOk');
   kpiCards = document.querySelectorAll('.kpi-card[data-severity-filter]');
+
+  // Grouped Incidents Elements
+  kpiIncTotal = document.getElementById('kpiIncTotal');
+  kpiIncP1 = document.getElementById('kpiIncP1');
+  kpiIncP2 = document.getElementById('kpiIncP2');
+  kpiIncP3 = document.getElementById('kpiIncP3');
+  kpiIncCards = document.querySelectorAll('.kpi-card[data-priority-filter]');
+
+  incSearchInput = document.getElementById('incSearchInput');
+  clearIncSearchBtn = document.getElementById('clearIncSearchBtn');
+  filterIncPriority = document.getElementById('filterIncPriority');
+  filterIncCategory = document.getElementById('filterIncCategory');
+  filterIncStatus = document.getElementById('filterIncStatus');
+  resetIncFiltersBtn = document.getElementById('resetIncFiltersBtn');
+  emptyIncResetBtn = document.getElementById('emptyIncResetBtn');
+
+  visibleIncCountEl = document.getElementById('visibleIncCount');
+  totalIncCountEl = document.getElementById('totalIncCount');
+  activeIncChipsEl = document.getElementById('activeIncChips');
+  incidentsListEl = document.getElementById('incidentsList');
+  emptyIncStateEl = document.getElementById('emptyIncState');
 }
 
 // Initialize Application
@@ -60,6 +108,7 @@ async function init() {
   setupEventListeners();
   await loadStats();
   await loadAlerts();
+  await loadIncidents();
 }
 
 // Load Telemetry Stats
@@ -416,68 +465,558 @@ function showToast(msg) {
   }, 2200);
 }
 
+// View Switching
+function switchView(viewName) {
+  if (viewName === 'raw') {
+    if (tabRawAlerts) tabRawAlerts.classList.add('active');
+    if (tabGroupedAlerts) tabGroupedAlerts.classList.remove('active');
+    if (rawAlertsView) rawAlertsView.style.display = 'block';
+    if (groupedIncidentsView) groupedIncidentsView.style.display = 'none';
+  } else if (viewName === 'grouped') {
+    if (tabGroupedAlerts) tabGroupedAlerts.classList.add('active');
+    if (tabRawAlerts) tabRawAlerts.classList.remove('active');
+    if (groupedIncidentsView) groupedIncidentsView.style.display = 'block';
+    if (rawAlertsView) rawAlertsView.style.display = 'none';
+    if (!allIncidents || allIncidents.length === 0) {
+      loadIncidents();
+    }
+  }
+}
+
+// Load Incidents
+async function loadIncidents() {
+  try {
+    const res = await fetch('/api/incidents');
+    if (!res.ok) throw new Error('Failed to load incidents');
+    const data = await res.json();
+    allIncidents = data.incidents || [];
+
+    const total = allIncidents.length;
+    const p1Count = allIncidents.filter(i => i.priority === 'P1').length;
+    const p2Count = allIncidents.filter(i => i.priority === 'P2').length;
+    const p3Count = allIncidents.filter(i => i.priority === 'P3').length;
+
+    if (kpiIncTotal) kpiIncTotal.textContent = total;
+    if (kpiIncP1) kpiIncP1.textContent = p1Count;
+    if (kpiIncP2) kpiIncP2.textContent = p2Count;
+    if (kpiIncP3) kpiIncP3.textContent = p3Count;
+    if (tabGroupedCountEl) tabGroupedCountEl.textContent = total;
+    if (totalIncCountEl) totalIncCountEl.textContent = total;
+
+    applyIncFilters();
+  } catch (err) {
+    console.error('Error loading incidents:', err);
+  }
+}
+
+// Pure Incident Filtering
+function filterIncidents(incidents, state) {
+  let result = [...incidents];
+
+  if (state.priority && state.priority !== 'all') {
+    result = result.filter(inc => inc.priority.toLowerCase() === state.priority.toLowerCase());
+  }
+
+  if (state.category && state.category !== 'all') {
+    result = result.filter(inc => inc.category.toLowerCase() === state.category.toLowerCase());
+  }
+
+  if (state.status && state.status !== 'all') {
+    result = result.filter(inc => inc.status.toLowerCase() === state.status.toLowerCase());
+  }
+
+  if (state.search && state.search.trim()) {
+    const q = state.search.toLowerCase().trim();
+    result = result.filter(inc => {
+      const corpus = `${inc.id} ${inc.title} ${inc.root_cause_hypothesis} ${inc.root_cause_component} ${inc.root_cause_location} ${inc.dispatch_target} ${inc.category} ${inc.blast_radius_summary}`.toLowerCase();
+      return corpus.includes(q);
+    });
+  }
+
+  return result;
+}
+
+function applyIncFilters() {
+  filteredIncidents = filterIncidents(allIncidents, incFilterState);
+  if (visibleIncCountEl) visibleIncCountEl.textContent = filteredIncidents.length;
+  renderActiveIncChips();
+  renderIncidents();
+}
+
+function renderActiveIncChips() {
+  if (!activeIncChipsEl) return;
+  activeIncChipsEl.innerHTML = '';
+
+  const chips = [];
+  if (incFilterState.priority !== 'all') chips.push({ type: 'priority', label: `Priority: ${incFilterState.priority}` });
+  if (incFilterState.category !== 'all') chips.push({ type: 'category', label: `Category: ${incFilterState.category}` });
+  if (incFilterState.status !== 'all') chips.push({ type: 'status', label: `Status: ${incFilterState.status}` });
+  if (incFilterState.search) chips.push({ type: 'search', label: `"${incFilterState.search}"` });
+
+  chips.forEach(chip => {
+    const el = document.createElement('div');
+    el.className = 'chip';
+    el.innerHTML = `<span>${escapeHtml(chip.label)}</span><button class="chip-remove" data-type="${chip.type}">&times;</button>`;
+    el.querySelector('.chip-remove').addEventListener('click', () => {
+      if (chip.type === 'priority') { incFilterState.priority = 'all'; if (filterIncPriority) filterIncPriority.value = 'all'; }
+      if (chip.type === 'category') { incFilterState.category = 'all'; if (filterIncCategory) filterIncCategory.value = 'all'; }
+      if (chip.type === 'status') { incFilterState.status = 'all'; if (filterIncStatus) filterIncStatus.value = 'all'; }
+      if (chip.type === 'search') { incFilterState.search = ''; if (incSearchInput) { incSearchInput.value = ''; clearIncSearchBtn.style.display = 'none'; } }
+      applyIncFilters();
+    });
+    activeIncChipsEl.appendChild(el);
+  });
+}
+
+function renderIncidents() {
+  if (!incidentsListEl) return;
+
+  if (filteredIncidents.length === 0) {
+    incidentsListEl.innerHTML = '';
+    if (emptyIncStateEl) emptyIncStateEl.style.display = 'block';
+    return;
+  }
+
+  if (emptyIncStateEl) emptyIncStateEl.style.display = 'none';
+
+  const categoryIcons = {
+    LiquidCooling: '💧',
+    Power: '⚡',
+    NetworkFabric: '🌐',
+    ComputeHost: '🖥️',
+    Storage: '💾',
+    Environmental: '🌡️',
+    Management: '⚙️'
+  };
+
+  const html = filteredIncidents.map(inc => {
+    const prioLower = inc.priority.toLowerCase();
+    const catIcon = categoryIcons[inc.category] || '⚠️';
+    const statusLower = inc.status.toLowerCase();
+    
+    // Timing
+    const timeFormatted = formatTime(inc.first_event_time);
+    const latestFormatted = formatTime(inc.latest_event_time);
+    const durationText = inc.first_event_time !== inc.latest_event_time
+      ? `Span: ${timeFormatted.time} → ${latestFormatted.time}`
+      : `Triggered: ${timeFormatted.time}`;
+
+    // Redundancy Pill Class
+    let redundancyClass = 'redundancy-optimal';
+    if (inc.redundancy_status.includes('N-0')) redundancyClass = 'redundancy-n0';
+    else if (inc.redundancy_status.includes('N-1')) redundancyClass = 'redundancy-n1';
+
+    // Playbook steps HTML
+    const playbookHtml = (inc.dispatch_playbook || []).map((step, idx) => `
+      <li class="playbook-step">
+        <span class="step-num">${idx + 1}</span>
+        <span>${escapeHtml(step)}</span>
+      </li>
+    `).join('');
+
+    // Impacted nodes tags
+    const impactedNodesHtml = (inc.impacted_nodes || []).slice(0, 8).map(node => `
+      <span class="node-tag">${escapeHtml(node)}</span>
+    `).join('') + ((inc.impacted_nodes && inc.impacted_nodes.length > 8) ? `<span class="node-tag">+${inc.impacted_nodes.length - 8} more</span>` : '');
+
+    // Correlated Alerts table rows
+    const childRowsHtml = (inc.dependent_alert_ids || []).map(alertId => {
+      const alertObj = allAlerts.find(a => a.Id === alertId);
+      const isRoot = alertId === inc.root_cause_alert_id;
+      const sev = alertObj ? alertObj.Severity : 'Warning';
+      const msg = alertObj ? alertObj.Message : `Redfish Alert ${alertId}`;
+      const timeStr = alertObj ? formatRelativeTime(alertObj.Timestamp) : 'telemetry';
+
+      return `
+        <tr class="${isRoot ? 'is-root' : ''}">
+          <td style="font-family: var(--font-mono); font-weight: 600;">
+            ${escapeHtml(alertId)}
+            ${isRoot ? '<span class="root-indicator-pill">Root Cause</span>' : ''}
+          </td>
+          <td>
+            <span class="badge badge-${sev.toLowerCase()}">${sev}</span>
+          </td>
+          <td style="color: var(--text-muted);">${timeStr}</td>
+          <td style="max-width: 380px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(msg)}">
+            ${escapeHtml(msg)}
+          </td>
+          <td>
+            <button class="btn-child-inspect" onclick="openInspector('${escapeHtml(alertId)}')">
+              Inspect
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    // Action button based on status
+    let actionBtnHtml = '';
+    if (inc.status === 'Active') {
+      actionBtnHtml = `<button class="btn-ack" onclick="updateIncidentStatus('${escapeHtml(inc.id)}', 'Acknowledged')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        Acknowledge
+      </button>`;
+    } else if (inc.status === 'Acknowledged') {
+      actionBtnHtml = `<button class="btn-ack" style="color: #6ee7b7; border-color: rgba(16, 185, 129, 0.4);" onclick="updateIncidentStatus('${escapeHtml(inc.id)}', 'Resolved')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+          <polyline points="22 4 12 14.01 9 11.01"></polyline>
+        </svg>
+        Mark Resolved
+      </button>`;
+    }
+
+    return `
+      <article class="incident-card priority-${prioLower}" id="card-${escapeHtml(inc.id)}">
+        <!-- Top Header -->
+        <div class="incident-header">
+          <div class="incident-header-left">
+            <span class="priority-badge ${prioLower}">
+              ${prioLower === 'p1' ? '<span class="alert-pulse red"></span>' : ''}
+              ${prioLower === 'p2' ? '<span class="alert-pulse amber"></span>' : ''}
+              ${escapeHtml(inc.priority)} CRITICAL
+            </span>
+            <span class="incident-id">${escapeHtml(inc.id)}</span>
+            <span class="category-chip">${catIcon} ${escapeHtml(inc.category)}</span>
+            <span class="status-badge ${statusLower}">${escapeHtml(inc.status)}</span>
+          </div>
+          <div class="incident-header-right">
+            ${actionBtnHtml}
+          </div>
+        </div>
+
+        <!-- Title & Timing -->
+        <div class="incident-title-row">
+          <h2 class="incident-title">${escapeHtml(inc.title)}</h2>
+          <div class="incident-timing">
+            <div class="timing-item">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+              <span>First seen: ${timeFormatted.relative} (${timeFormatted.time})</span>
+            </div>
+            <div class="timing-item">
+              <span style="color: var(--color-cyan);">⚡ ${inc.dependent_alerts_count} Correlated Redfish Alerts</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hypothesis Callout Panel -->
+        <div class="hypothesis-panel">
+          <div class="hypothesis-header">
+            <div class="hypothesis-tag">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+              </svg>
+              AI Root-Cause Hypothesis & Topology Traversal
+            </div>
+            <button class="btn-inspect-root" onclick="openInspector('${escapeHtml(inc.root_cause_alert_id)}')">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              Inspect Root Alert (${escapeHtml(inc.root_cause_alert_id)})
+            </button>
+          </div>
+          <p class="hypothesis-text">${escapeHtml(inc.root_cause_hypothesis)}</p>
+          <div class="root-cause-meta">
+            <div class="root-cause-node">
+              <span>Originating Node:</span>
+              <span class="node-highlight">${escapeHtml(inc.root_cause_component)}</span>
+            </div>
+            <div class="root-cause-node">
+              <span>Location:</span>
+              <span style="color: #cbd5e1;">${escapeHtml(inc.root_cause_location)}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Impact & Redundancy Grid -->
+        <div class="incident-impact-grid">
+          <div class="impact-box">
+            <div class="impact-box-label">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              </svg>
+              Redundancy Health
+            </div>
+            <span class="redundancy-pill ${redundancyClass}">
+              ${escapeHtml(inc.redundancy_status)}
+            </span>
+          </div>
+          <div class="impact-box">
+            <div class="impact-box-label">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <circle cx="12" cy="12" r="6"></circle>
+                <circle cx="12" cy="12" r="2"></circle>
+              </svg>
+              Blast Radius Summary
+            </div>
+            <div class="blast-radius-desc">${escapeHtml(inc.blast_radius_summary)}</div>
+            <div class="impacted-nodes-tags">${impactedNodesHtml}</div>
+          </div>
+        </div>
+
+        <!-- Dispatch & Playbook -->
+        <div class="dispatch-section">
+          <div class="dispatch-header">
+            <div class="dispatch-target-badge">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+              Dispatch: ${escapeHtml(inc.dispatch_target)}
+            </div>
+            <span style="color: var(--text-muted); font-size: 0.72rem;">Operational Playbook (${(inc.dispatch_playbook || []).length} steps)</span>
+          </div>
+          <ul class="playbook-list">
+            ${playbookHtml}
+          </ul>
+        </div>
+
+        <!-- Collapsible Correlated Alerts Accordion -->
+        <div class="correlated-alerts-toggle" onclick="toggleCorrelatedAlerts('${escapeHtml(inc.id)}')">
+          <div class="toggle-left">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+            </svg>
+            <span>Correlated Redfish Alerts (${inc.dependent_alerts_count})</span>
+          </div>
+          <svg class="toggle-icon" id="toggle-icon-${escapeHtml(inc.id)}" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+
+        <div class="correlated-alerts-panel" id="panel-${escapeHtml(inc.id)}">
+          <table class="child-alerts-table">
+            <thead>
+              <tr>
+                <th>Alert ID</th>
+                <th>Severity</th>
+                <th>Age</th>
+                <th>Message</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${childRowsHtml}
+            </tbody>
+          </table>
+        </div>
+      </article>
+    `;
+  }).join('');
+
+  incidentsListEl.innerHTML = html;
+}
+
+// Update Incident Status
+async function updateIncidentStatus(incidentId, newStatus) {
+  try {
+    const res = await fetch(`/api/incidents/${encodeURIComponent(incidentId)}/status`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus })
+    });
+    if (!res.ok) throw new Error('Failed to update status');
+    const updated = await res.json();
+
+    const target = allIncidents.find(i => i.id === incidentId);
+    if (target) {
+      target.status = updated.status;
+    }
+    applyIncFilters();
+    showToast(`Incident ${incidentId} marked as ${newStatus}`);
+  } catch (err) {
+    console.error('Error updating status:', err);
+    showToast(`Failed to update status for ${incidentId}`);
+  }
+}
+
+// Toggle Child Alerts
+function toggleCorrelatedAlerts(incidentId) {
+  const panel = document.getElementById(`panel-${incidentId}`);
+  const icon = document.getElementById(`toggle-icon-${incidentId}`);
+  if (!panel) return;
+
+  const isShowing = panel.classList.contains('show');
+  if (isShowing) {
+    panel.classList.remove('show');
+    if (icon && icon.parentElement) icon.parentElement.classList.remove('expanded');
+  } else {
+    panel.classList.add('show');
+    if (icon && icon.parentElement) icon.parentElement.classList.add('expanded');
+  }
+}
+
+// Reset Incident Filters
+function resetAllIncFilters() {
+  incFilterState.priority = 'all';
+  incFilterState.category = 'all';
+  incFilterState.status = 'all';
+  incFilterState.search = '';
+
+  if (filterIncPriority) filterIncPriority.value = 'all';
+  if (filterIncCategory) filterIncCategory.value = 'all';
+  if (filterIncStatus) filterIncStatus.value = 'all';
+  if (incSearchInput) {
+    incSearchInput.value = '';
+    clearIncSearchBtn.style.display = 'none';
+  }
+
+  applyIncFilters();
+}
+
 // Event Listeners
 function setupEventListeners() {
-  // Search Input
-  searchInput.addEventListener('input', (e) => {
-    filterState.search = e.target.value;
-    clearSearchBtn.style.display = filterState.search ? 'block' : 'none';
-    applyFilters();
-  });
+  // Tab Switching
+  if (tabRawAlerts) {
+    tabRawAlerts.addEventListener('click', () => switchView('raw'));
+  }
+  if (tabGroupedAlerts) {
+    tabGroupedAlerts.addEventListener('click', () => switchView('grouped'));
+  }
 
-  clearSearchBtn.addEventListener('click', () => {
-    filterState.search = '';
-    searchInput.value = '';
-    clearSearchBtn.style.display = 'none';
-    applyFilters();
-  });
-
-  // Severity Select
-  filterSeverity.addEventListener('change', (e) => {
-    filterState.severity = e.target.value;
-    applyFilters();
-  });
-
-  // Subsystem Select
-  filterSubsystem.addEventListener('change', (e) => {
-    filterState.subsystem = e.target.value;
-    applyFilters();
-  });
-
-  // Rack Select
-  filterRack.addEventListener('change', (e) => {
-    filterState.rack = e.target.value;
-    applyFilters();
-  });
-
-  // Sort Select
-  sortBySelect.addEventListener('change', (e) => {
-    filterState.sortBy = e.target.value;
-    applyFilters();
-  });
-
-  // Reset Buttons
-  resetFiltersBtn.addEventListener('click', resetAllFilters);
-  emptyResetBtn.addEventListener('click', resetAllFilters);
-
-  // KPI card quick clicks
-  kpiCards.forEach(card => {
-    card.addEventListener('click', () => {
-      const targetSev = card.getAttribute('data-severity-filter');
-      if (filterState.severity === targetSev) {
-        filterState.severity = 'all';
-        filterSeverity.value = 'all';
-      } else {
-        filterState.severity = targetSev;
-        filterSeverity.value = targetSev;
-      }
+  // Raw Alerts Search Input
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      filterState.search = e.target.value;
+      clearSearchBtn.style.display = filterState.search ? 'block' : 'none';
       applyFilters();
     });
-  });
+  }
+
+  if (clearSearchBtn) {
+    clearSearchBtn.addEventListener('click', () => {
+      filterState.search = '';
+      searchInput.value = '';
+      clearSearchBtn.style.display = 'none';
+      applyFilters();
+    });
+  }
+
+  // Raw Alerts Filters
+  if (filterSeverity) {
+    filterSeverity.addEventListener('change', (e) => {
+      filterState.severity = e.target.value;
+      applyFilters();
+    });
+  }
+
+  if (filterSubsystem) {
+    filterSubsystem.addEventListener('change', (e) => {
+      filterState.subsystem = e.target.value;
+      applyFilters();
+    });
+  }
+
+  if (filterRack) {
+    filterRack.addEventListener('change', (e) => {
+      filterState.rack = e.target.value;
+      applyFilters();
+    });
+  }
+
+  if (sortBySelect) {
+    sortBySelect.addEventListener('change', (e) => {
+      filterState.sortBy = e.target.value;
+      applyFilters();
+    });
+  }
+
+  // Raw Alerts Reset
+  if (resetFiltersBtn) resetFiltersBtn.addEventListener('click', resetAllFilters);
+  if (emptyResetBtn) emptyResetBtn.addEventListener('click', resetAllFilters);
+
+  // Raw Alerts KPI Cards
+  if (kpiCards) {
+    kpiCards.forEach(card => {
+      card.addEventListener('click', () => {
+        const targetSev = card.getAttribute('data-severity-filter');
+        if (filterState.severity === targetSev) {
+          filterState.severity = 'all';
+          filterSeverity.value = 'all';
+        } else {
+          filterState.severity = targetSev;
+          filterSeverity.value = targetSev;
+        }
+        applyFilters();
+      });
+    });
+  }
+
+  // Incident Search Input
+  if (incSearchInput) {
+    incSearchInput.addEventListener('input', (e) => {
+      incFilterState.search = e.target.value;
+      if (clearIncSearchBtn) clearIncSearchBtn.style.display = incFilterState.search ? 'block' : 'none';
+      applyIncFilters();
+    });
+  }
+
+  if (clearIncSearchBtn) {
+    clearIncSearchBtn.addEventListener('click', () => {
+      incFilterState.search = '';
+      if (incSearchInput) incSearchInput.value = '';
+      clearIncSearchBtn.style.display = 'none';
+      applyIncFilters();
+    });
+  }
+
+  // Incident Filters
+  if (filterIncPriority) {
+    filterIncPriority.addEventListener('change', (e) => {
+      incFilterState.priority = e.target.value;
+      applyIncFilters();
+    });
+  }
+
+  if (filterIncCategory) {
+    filterIncCategory.addEventListener('change', (e) => {
+      incFilterState.category = e.target.value;
+      applyIncFilters();
+    });
+  }
+
+  if (filterIncStatus) {
+    filterIncStatus.addEventListener('change', (e) => {
+      incFilterState.status = e.target.value;
+      applyIncFilters();
+    });
+  }
+
+  // Incident Reset
+  if (resetIncFiltersBtn) resetIncFiltersBtn.addEventListener('click', resetAllIncFilters);
+  if (emptyIncResetBtn) emptyIncResetBtn.addEventListener('click', resetAllIncFilters);
+
+  // Incident KPI Cards
+  if (kpiIncCards) {
+    kpiIncCards.forEach(card => {
+      card.addEventListener('click', () => {
+        const targetPrio = card.getAttribute('data-priority-filter');
+        if (incFilterState.priority === targetPrio) {
+          incFilterState.priority = 'all';
+          if (filterIncPriority) filterIncPriority.value = 'all';
+        } else {
+          incFilterState.priority = targetPrio;
+          if (filterIncPriority) filterIncPriority.value = targetPrio;
+        }
+        applyIncFilters();
+      });
+    });
+  }
 
   // Drawer Close
-  closeDrawerBtn.addEventListener('click', closeInspector);
-  drawerBackdrop.addEventListener('click', closeInspector);
+  if (closeDrawerBtn) closeDrawerBtn.addEventListener('click', closeInspector);
+  if (drawerBackdrop) drawerBackdrop.addEventListener('click', closeInspector);
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeInspector();
   });
@@ -528,6 +1067,13 @@ function escapeHtml(str) {
 
 // Browser Initialization
 if (typeof window !== 'undefined') {
+  window.switchView = switchView;
+  window.updateIncidentStatus = updateIncidentStatus;
+  window.toggleCorrelatedAlerts = toggleCorrelatedAlerts;
+  window.resetAllIncFilters = resetAllIncFilters;
+  window.openInspector = openInspector;
+  window.copyAlertJson = copyAlertJson;
+
   window.addEventListener('DOMContentLoaded', init);
 
   // Auto-refresh relative time every 30 seconds
@@ -545,6 +1091,7 @@ if (typeof module !== 'undefined' && module.exports) {
     formatTime,
     escapeHtml,
     filterAlerts,
-    sortAlerts
+    sortAlerts,
+    filterIncidents
   };
 }
