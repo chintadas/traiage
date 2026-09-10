@@ -20,23 +20,32 @@ class Incident(BaseModel):
     root_cause_alert_id: str
     root_cause_node_id: Optional[str] = None
     root_cause_node_name: Optional[str] = None
+    root_cause_component: Optional[str] = None
     root_cause_location: str
     root_cause_hypothesis: str
     
     impact_summary: str
+    blast_radius_summary: str = ""
     affected_nodes: List[str] = Field(default_factory=list)
+    impacted_nodes: List[str] = Field(default_factory=list)
     redundancy_state: Dict[str, Any] = Field(default_factory=dict)
+    redundancy_status: str = ""
     
     alerts_count: int
     alert_ids: List[str] = Field(default_factory=list)
+    dependent_alert_ids: List[str] = Field(default_factory=list)
+    dependent_alerts_count: int = 0
     alerts: List[Dict[str, Any]] = Field(default_factory=list)
     
     recommended_actions: List[str] = Field(default_factory=list)
+    dispatch_playbook: List[str] = Field(default_factory=list)
     dispatch_target: str
     suggested_team: str
     
     first_seen: str
     last_seen: str
+    first_event_time: str = ""
+    latest_event_time: str = ""
 
 class TriageEngine:
     """
@@ -235,6 +244,23 @@ class TriageEngine:
                 redundancy_state=redundancy_state
             )
 
+            # Derive redundancy status string from state dict
+            redundancy_status_str = ""
+            if redundancy_state:
+                level = redundancy_state.get("level", "")
+                status_val = redundancy_state.get("status", "")
+                if level:
+                    redundancy_status_str = level
+                elif status_val:
+                    redundancy_status_str = status_val
+                else:
+                    redundancy_status_str = "Nominal"
+            else:
+                redundancy_status_str = "Nominal"
+
+            all_event_ids = [a.get("EventId", "") for a in all_raw_alerts]
+            root_component_name = root_node.name if root_node else "Unknown Component"
+
             incident = Incident(
                 id=f"INC-20260908-{inc_counter:03d}",
                 title=synth["title"],
@@ -243,20 +269,29 @@ class TriageEngine:
                 category=synth["category"],
                 root_cause_alert_id=root_alert.get("EventId", ""),
                 root_cause_node_id=root_node.id if root_node else None,
-                root_cause_node_name=root_node.name if root_node else "Unknown Component",
+                root_cause_node_name=root_component_name,
+                root_cause_component=root_component_name,
                 root_cause_location=loc_str,
                 root_cause_hypothesis=synth["hypothesis"],
                 impact_summary=synth["impact_summary"],
+                blast_radius_summary=synth["impact_summary"],
                 affected_nodes=affected_nodes_list,
+                impacted_nodes=affected_nodes_list,
                 redundancy_state=redundancy_state,
+                redundancy_status=redundancy_status_str,
                 alerts_count=len(all_raw_alerts),
-                alert_ids=[a.get("EventId", "") for a in all_raw_alerts],
+                alert_ids=all_event_ids,
+                dependent_alert_ids=all_event_ids,
+                dependent_alerts_count=len(all_raw_alerts),
                 alerts=all_raw_alerts,
                 recommended_actions=synth["recommended_actions"],
+                dispatch_playbook=synth["recommended_actions"],
                 dispatch_target=synth["dispatch_target"],
                 suggested_team=synth["suggested_team"],
                 first_seen=first_seen,
-                last_seen=last_seen
+                last_seen=last_seen,
+                first_event_time=first_seen,
+                latest_event_time=last_seen
             )
             incidents.append(incident)
             inc_counter += 1
