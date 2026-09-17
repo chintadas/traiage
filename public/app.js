@@ -601,11 +601,6 @@ function renderIncidents() {
       ? `Span: ${timeFormatted.time} → ${latestFormatted.time}`
       : `Triggered: ${timeFormatted.time}`;
 
-    // Redundancy Pill Class
-    let redundancyClass = 'redundancy-optimal';
-    if (inc.redundancy_status.includes('N-0')) redundancyClass = 'redundancy-n0';
-    else if (inc.redundancy_status.includes('N-1')) redundancyClass = 'redundancy-n1';
-
     // Playbook steps HTML
     const playbookHtml = (inc.dispatch_playbook || []).map((step, idx) => `
       <li class="playbook-step">
@@ -614,37 +609,27 @@ function renderIncidents() {
       </li>
     `).join('');
 
-    // Impacted nodes tags
-    const impactedNodesHtml = (inc.impacted_nodes || []).slice(0, 8).map(node => `
-      <span class="node-tag">${escapeHtml(node)}</span>
-    `).join('') + ((inc.impacted_nodes && inc.impacted_nodes.length > 8) ? `<span class="node-tag">+${inc.impacted_nodes.length - 8} more</span>` : '');
-
     // Correlated Alerts table rows
     const childRowsHtml = (inc.dependent_alert_ids || []).map(alertId => {
-      const alertObj = allAlerts.find(a => a.Id === alertId);
+      const alertObj = allAlerts.find(a => a.EventId === alertId);
       const isRoot = alertId === inc.root_cause_alert_id;
       const sev = alertObj ? alertObj.Severity : 'Warning';
-      const msg = alertObj ? alertObj.Message : `Redfish Alert ${alertId}`;
-      const timeStr = alertObj ? formatRelativeTime(alertObj.Timestamp) : 'telemetry';
+      const msg = alertObj ? alertObj.Message : alertId;
+      const timeStr = alertObj ? formatRelativeTime(alertObj.Timestamp) : '—';
 
       return `
-        <tr class="${isRoot ? 'is-root' : ''}">
-          <td style="font-family: var(--font-mono); font-weight: 600;">
+        <tr class="child-alert-row ${isRoot ? 'is-root' : ''}" onclick="openInspector('${escapeHtml(alertId)}')" title="Click to inspect ${escapeHtml(alertId)}">
+          <td style="font-family: var(--font-mono); font-weight: 600; white-space: nowrap;">
             ${escapeHtml(alertId)}
             ${isRoot ? '<span class="root-indicator-pill">Root Cause</span>' : ''}
+          </td>
+          <td style="max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(msg)}">
+            ${escapeHtml(msg)}
           </td>
           <td>
             <span class="badge badge-${sev.toLowerCase()}">${sev}</span>
           </td>
-          <td style="color: var(--text-muted);">${timeStr}</td>
-          <td style="max-width: 380px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(msg)}">
-            ${escapeHtml(msg)}
-          </td>
-          <td>
-            <button class="btn-child-inspect" onclick="openInspector('${escapeHtml(alertId)}')">
-              Inspect
-            </button>
-          </td>
+          <td style="color: var(--text-muted); white-space: nowrap;">${timeStr}</td>
         </tr>
       `;
     }).join('');
@@ -704,6 +689,37 @@ function renderIncidents() {
           </div>
         </div>
 
+        <!-- Correlated Alerts Pane (First pane before AI Root-Cause Hypothesis) -->
+        <div class="correlated-alerts-section">
+          <div class="correlated-alerts-toggle" id="toggle-btn-${escapeHtml(inc.id)}" onclick="toggleCorrelatedAlerts('${escapeHtml(inc.id)}')">
+            <div class="toggle-left">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+              </svg>
+              <span>Correlated Redfish Alerts (${inc.dependent_alerts_count})</span>
+            </div>
+            <svg class="toggle-icon" id="toggle-icon-${escapeHtml(inc.id)}" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </div>
+
+          <div class="correlated-alerts-panel" id="panel-${escapeHtml(inc.id)}">
+            <table class="child-alerts-table">
+              <thead>
+                <tr>
+                  <th>Alert ID</th>
+                  <th>Message</th>
+                  <th>Severity</th>
+                  <th>Age</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${childRowsHtml}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         <!-- Hypothesis Callout Panel -->
         <div class="hypothesis-panel">
           <div class="hypothesis-header">
@@ -736,34 +752,7 @@ function renderIncidents() {
           </div>
         </div>
 
-        <!-- Impact & Redundancy Grid -->
-        <div class="incident-impact-grid">
-          <div class="impact-box">
-            <div class="impact-box-label">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-              </svg>
-              Redundancy Health
-            </div>
-            <span class="redundancy-pill ${redundancyClass}">
-              ${escapeHtml(inc.redundancy_status)}
-            </span>
-          </div>
-          <div class="impact-box">
-            <div class="impact-box-label">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"></circle>
-                <circle cx="12" cy="12" r="6"></circle>
-                <circle cx="12" cy="12" r="2"></circle>
-              </svg>
-              Blast Radius Summary
-            </div>
-            <div class="blast-radius-desc">${escapeHtml(inc.blast_radius_summary)}</div>
-            <div class="impacted-nodes-tags">${impactedNodesHtml}</div>
-          </div>
-        </div>
-
-        <!-- Dispatch & Playbook -->
+        <!-- Dispatch & Playbook (Collapsed by default) -->
         <div class="dispatch-section">
           <div class="dispatch-header">
             <div class="dispatch-target-badge">
@@ -775,41 +764,18 @@ function renderIncidents() {
               </svg>
               Dispatch: ${escapeHtml(inc.dispatch_target)}
             </div>
-            <span style="color: var(--text-muted); font-size: 0.72rem;">Operational Playbook (${(inc.dispatch_playbook || []).length} steps)</span>
+            <button class="playbook-toggle-btn" id="playbook-toggle-${escapeHtml(inc.id)}" onclick="togglePlaybook('${escapeHtml(inc.id)}')">
+              <span>Operational Playbook (${(inc.dispatch_playbook || []).length} steps)</span>
+              <svg class="playbook-toggle-icon" id="playbook-icon-${escapeHtml(inc.id)}" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
           </div>
-          <ul class="playbook-list">
-            ${playbookHtml}
-          </ul>
-        </div>
-
-        <!-- Collapsible Correlated Alerts Accordion -->
-        <div class="correlated-alerts-toggle" onclick="toggleCorrelatedAlerts('${escapeHtml(inc.id)}')">
-          <div class="toggle-left">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
-            </svg>
-            <span>Correlated Redfish Alerts (${inc.dependent_alerts_count})</span>
+          <div class="playbook-panel" id="playbook-panel-${escapeHtml(inc.id)}">
+            <ul class="playbook-list">
+              ${playbookHtml}
+            </ul>
           </div>
-          <svg class="toggle-icon" id="toggle-icon-${escapeHtml(inc.id)}" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="6 9 12 15 18 9"></polyline>
-          </svg>
-        </div>
-
-        <div class="correlated-alerts-panel" id="panel-${escapeHtml(inc.id)}">
-          <table class="child-alerts-table">
-            <thead>
-              <tr>
-                <th>Alert ID</th>
-                <th>Severity</th>
-                <th>Age</th>
-                <th>Message</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${childRowsHtml}
-            </tbody>
-          </table>
         </div>
       </article>
     `;
@@ -845,15 +811,32 @@ async function updateIncidentStatus(incidentId, newStatus) {
 function toggleCorrelatedAlerts(incidentId) {
   const panel = document.getElementById(`panel-${incidentId}`);
   const icon = document.getElementById(`toggle-icon-${incidentId}`);
+  const toggle = document.getElementById(`toggle-btn-${incidentId}`) || (icon ? icon.closest('.correlated-alerts-toggle') : null);
   if (!panel) return;
 
   const isShowing = panel.classList.contains('show');
   if (isShowing) {
     panel.classList.remove('show');
-    if (icon && icon.parentElement) icon.parentElement.classList.remove('expanded');
+    if (toggle) toggle.classList.remove('expanded');
   } else {
     panel.classList.add('show');
-    if (icon && icon.parentElement) icon.parentElement.classList.add('expanded');
+    if (toggle) toggle.classList.add('expanded');
+  }
+}
+
+// Toggle Operational Playbook
+function togglePlaybook(incidentId) {
+  const panel = document.getElementById(`playbook-panel-${incidentId}`);
+  const btn = document.getElementById(`playbook-toggle-${incidentId}`);
+  if (!panel) return;
+
+  const isShowing = panel.classList.contains('show');
+  if (isShowing) {
+    panel.classList.remove('show');
+    if (btn) btn.classList.remove('expanded');
+  } else {
+    panel.classList.add('show');
+    if (btn) btn.classList.add('expanded');
   }
 }
 
@@ -1070,6 +1053,7 @@ if (typeof window !== 'undefined') {
   window.switchView = switchView;
   window.updateIncidentStatus = updateIncidentStatus;
   window.toggleCorrelatedAlerts = toggleCorrelatedAlerts;
+  window.togglePlaybook = togglePlaybook;
   window.resetAllIncFilters = resetAllIncFilters;
   window.openInspector = openInspector;
   window.copyAlertJson = copyAlertJson;

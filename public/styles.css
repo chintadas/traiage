@@ -1291,14 +1291,15 @@ body {
   border: 1px solid rgba(75, 85, 99, 0.3);
   border-radius: 8px;
   padding: 0.9rem 1.1rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0;
 }
 
 .dispatch-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 0.65rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
   font-size: 0.78rem;
   color: var(--text-secondary);
 }
@@ -1313,6 +1314,46 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
+}
+
+.playbook-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #94a3b8;
+  padding: 0.25rem 0.65rem;
+  border-radius: 6px;
+  font-size: 0.74rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.playbook-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #f1f5f9;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.playbook-toggle-icon {
+  transition: transform 0.25s ease;
+}
+
+.playbook-toggle-btn.expanded .playbook-toggle-icon {
+  transform: rotate(180deg);
+}
+
+.playbook-panel {
+  display: none;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(75, 85, 99, 0.25);
+}
+
+.playbook-panel.show {
+  display: block;
 }
 
 .playbook-list {
@@ -1344,6 +1385,10 @@ body {
 }
 
 /* Correlated Alerts Collapsible Drawer */
+.correlated-alerts-section {
+  margin-bottom: 1rem;
+}
+
 .correlated-alerts-toggle {
   display: flex;
   align-items: center;
@@ -1417,8 +1462,23 @@ body {
   background: rgba(255, 255, 255, 0.02);
 }
 
+
 .child-alerts-table tr.is-root td {
   background: rgba(59, 130, 246, 0.08);
+}
+
+.child-alert-row {
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.child-alert-row:hover td {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: #f1f5f9;
+}
+
+.child-alert-row.is-root:hover td {
+  background: rgba(59, 130, 246, 0.14) !important;
 }
 
 .root-indicator-pill {
@@ -1430,21 +1490,4 @@ body {
   border-radius: 4px;
   margin-left: 0.4rem;
   text-transform: uppercase;
-}
-
-.btn-child-inspect {
-  background: transparent;
-  border: 1px solid var(--border-color);
-  color: var(--text-secondary);
-  font-size: 0.7rem;
-  padding: 0.2rem 0.5rem;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.btn-child-inspect:hover {
-  background: var(--bg-tertiary);
-  color: #fff;
-  border-color: var(--border-highlight);
 }
