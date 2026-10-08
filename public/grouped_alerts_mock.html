@@ -1,0 +1,1259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grouped Alerts UI Mocks - TRAIAGE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* Clean Light Theme (Default for clarity & clutter-free review) */
+      --bg-page: #f8fafc;
+      --bg-card: #ffffff;
+      --bg-subtle: #f1f5f9;
+      --bg-hover: #f8fafc;
+      --border-subtle: #e2e8f0;
+      --border-strong: #cbd5e1;
+      
+      --text-main: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+      
+      /* Severity tokens */
+      --crit-color: #dc2626;
+      --crit-bg: #fef2f2;
+      --crit-border: #fecaca;
+      
+      --major-color: #d97706;
+      --major-bg: #fffbeb;
+      --major-border: #fde68a;
+      
+      --minor-color: #2563eb;
+      --minor-bg: #eff6ff;
+      --minor-border: #bfdbfe;
+
+      /* Status tokens */
+      --status-assigned-color: #7c3aed;
+      --status-assigned-bg: #f5f3ff;
+      --status-assigned-border: #ddd6fe;
+
+      --status-new-color: #059669;
+      --status-new-bg: #ecfdf5;
+      --status-new-border: #a7f3d0;
+
+      --status-unassigned-color: #64748b;
+      --status-unassigned-bg: #f8fafc;
+      --status-unassigned-border: #e2e8f0;
+
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+      --radius-sm: 6px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+    }
+
+    /* Dark Mode Theme */
+    [data-theme="dark"] {
+      --bg-page: #0b0f19;
+      --bg-card: #111827;
+      --bg-subtle: #1e293b;
+      --bg-hover: #1f293d;
+      --border-subtle: #334155;
+      --border-strong: #475569;
+      
+      --text-main: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+
+      --crit-color: #f87171;
+      --crit-bg: rgba(220, 38, 38, 0.15);
+      --crit-border: rgba(220, 38, 38, 0.35);
+
+      --major-color: #fbbf24;
+      --major-bg: rgba(217, 119, 6, 0.15);
+      --major-border: rgba(217, 119, 6, 0.35);
+
+      --minor-color: #60a5fa;
+      --minor-bg: rgba(37, 99, 235, 0.15);
+      --minor-border: rgba(37, 99, 235, 0.35);
+
+      --status-assigned-color: #c084fc;
+      --status-assigned-bg: rgba(124, 58, 237, 0.18);
+      --status-assigned-border: rgba(124, 58, 237, 0.35);
+
+      --status-new-color: #34d399;
+      --status-new-bg: rgba(5, 150, 105, 0.18);
+      --status-new-border: rgba(5, 150, 105, 0.35);
+
+      --status-unassigned-color: #94a3b8;
+      --status-unassigned-bg: rgba(100, 116, 139, 0.18);
+      --status-unassigned-border: rgba(100, 116, 139, 0.35);
+
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+      --shadow-md: 0 4px 10px rgba(0, 0, 0, 0.5);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-page);
+      color: var(--text-main);
+      padding: 2rem 1.5rem;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    /* Outer Wrapper */
+    .mock-container {
+      width: 100%;
+      max-width: 940px;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    /* Top Utility Bar */
+    .toolbar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .toolbar-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .toolbar-actions {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+    }
+
+    .tab-pills {
+      display: flex;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 3px;
+      gap: 3px;
+    }
+
+    .tab-btn {
+      font-family: inherit;
+      font-size: 0.825rem;
+      font-weight: 600;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      padding: 0.45rem 0.9rem;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: all 0.15s ease;
+    }
+
+    .tab-btn.active {
+      background: var(--bg-card);
+      color: var(--text-main);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .theme-toggle-btn {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      padding: 0.45rem 0.75rem;
+      border-radius: var(--radius-md);
+      font-size: 0.825rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      box-shadow: var(--shadow-sm);
+      transition: background 0.15s ease;
+    }
+
+    .theme-toggle-btn:hover {
+      background: var(--bg-subtle);
+    }
+
+    /* Common Card Styles */
+    .card-shell {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+
+    /* ----------------------------------------------------
+       VIEW 1: LIST VIEW (TOP 5 GROUPED ALERTS)
+       ---------------------------------------------------- */
+    .view-card-header {
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .view-title-group h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      color: var(--text-main);
+    }
+
+    .view-sub-label {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .alerts-list {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .alert-row {
+      display: flex;
+      align-items: center;
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--border-subtle);
+      gap: 1.25rem;
+      transition: background-color 0.15s ease, transform 0.15s ease;
+      cursor: pointer;
+    }
+
+    .alert-row:last-child {
+      border-bottom: none;
+    }
+
+    .alert-row:hover {
+      background-color: var(--bg-hover);
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 0.25rem 0.55rem;
+      border-radius: 4px;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .badge-critical {
+      color: var(--crit-color);
+      background: var(--crit-bg);
+      border: 1px solid var(--crit-border);
+    }
+
+    .badge-major {
+      color: var(--major-color);
+      background: var(--major-bg);
+      border: 1px solid var(--major-border);
+    }
+
+    .badge-minor {
+      color: var(--minor-color);
+      background: var(--minor-bg);
+      border: 1px solid var(--minor-border);
+    }
+
+    .badge-assigned {
+      color: var(--status-assigned-color);
+      background: var(--status-assigned-bg);
+      border: 1px solid var(--status-assigned-border);
+    }
+
+    .badge-new {
+      color: var(--status-new-color);
+      background: var(--status-new-bg);
+      border: 1px solid var(--status-new-border);
+    }
+
+    .badge-unassigned {
+      color: var(--status-unassigned-color);
+      background: var(--status-unassigned-bg);
+      border: 1px solid var(--status-unassigned-border);
+    }
+
+    .severity-col {
+      width: 78px;
+      flex-shrink: 0;
+    }
+
+    .title-col {
+      flex: 1;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .title-col .target-hint {
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      font-weight: 400;
+    }
+
+    .status-col {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.2rem;
+      width: 130px;
+      flex-shrink: 0;
+    }
+
+    .time-subtext {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .count-col {
+      width: 90px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .alert-count-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-subtle);
+      padding: 0.25rem 0.6rem;
+      border-radius: 9999px;
+      transition: all 0.15s ease;
+    }
+
+    .alert-row:hover .alert-count-pill {
+      background: var(--bg-card);
+      border-color: var(--border-strong);
+      color: var(--text-main);
+    }
+
+    .chevron-icon {
+      color: var(--text-muted);
+      margin-left: 0.25rem;
+      transition: transform 0.15s ease;
+    }
+
+    .alert-row:hover .chevron-icon {
+      transform: translateX(2px);
+      color: var(--text-secondary);
+    }
+
+    /* ----------------------------------------------------
+       VIEW 2: DETAILED VIEW (INCIDENT DRILLDOWN)
+       ---------------------------------------------------- */
+    .detail-view-container {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .nav-breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.825rem;
+      color: var(--text-secondary);
+    }
+
+    .back-btn {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-weight: 600;
+      font-size: 0.825rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.25rem 0.5rem;
+      margin-left: -0.5rem;
+      border-radius: var(--radius-sm);
+      transition: background 0.15s ease;
+    }
+
+    .back-btn:hover {
+      background: var(--bg-subtle);
+      color: var(--text-main);
+    }
+
+    .detail-header-card {
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .detail-top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+
+    .detail-heading-cluster {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .detail-heading-cluster h2 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      color: var(--text-main);
+    }
+
+    .detail-status-cluster {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      flex-shrink: 0;
+    }
+
+    .location-banner {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-subtle);
+      padding: 0.4rem 0.75rem;
+      border-radius: var(--radius-sm);
+      width: fit-content;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .location-banner strong {
+      color: var(--text-main);
+    }
+
+    /* Detail Narrative Box (The box labeled "Detail" in sketch) */
+    .detail-box-section {
+      padding: 1.25rem 1.5rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .section-mini-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-secondary);
+    }
+
+    .detail-summary-text {
+      font-size: 0.925rem;
+      line-height: 1.6;
+      color: var(--text-main);
+    }
+
+    .meta-metrics-row {
+      display: flex;
+      gap: 1.5rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid var(--border-subtle);
+      margin-top: 0.25rem;
+    }
+
+    .meta-metric-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+    }
+
+    .meta-metric-label {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .meta-metric-value {
+      font-size: 0.825rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    /* Alerts Sub-Table Section */
+    .alerts-table-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    .table-section-header {
+      padding: 1rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .table-section-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .table-badge-count {
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: var(--bg-subtle);
+      padding: 0.15rem 0.5rem;
+      border-radius: 9999px;
+      color: var(--text-secondary);
+    }
+
+    .sub-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      text-align: left;
+    }
+
+    .sub-table th {
+      padding: 0.75rem 1rem;
+      background: var(--bg-subtle);
+      color: var(--text-secondary);
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .sub-table th:first-child {
+      padding-left: 1.5rem;
+    }
+
+    .sub-table th:last-child {
+      padding-right: 1.5rem;
+    }
+
+    .sub-table td {
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      vertical-align: middle;
+    }
+
+    .sub-table td:first-child {
+      padding-left: 1.5rem;
+      font-weight: 500;
+    }
+
+    .sub-table td:last-child {
+      padding-right: 1.5rem;
+    }
+
+    .sub-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .sub-table tr:hover td {
+      background: var(--bg-hover);
+    }
+
+    .mono-cell {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    /* Accordions: Root Cause Hypothesis & Suggested Actions */
+    .accordions-container {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .accordion-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      transition: border-color 0.15s ease;
+    }
+
+    .accordion-card.open {
+      border-color: var(--border-strong);
+    }
+
+    .accordion-trigger {
+      width: 100%;
+      padding: 1.1rem 1.5rem;
+      background: none;
+      border: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      font-family: inherit;
+      text-align: left;
+      transition: background-color 0.15s ease;
+    }
+
+    .accordion-trigger:hover {
+      background: var(--bg-hover);
+    }
+
+    .accordion-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+    }
+
+    .accordion-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--text-main);
+    }
+
+    .accordion-indicator-pill {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-subtle);
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      text-transform: none;
+    }
+
+    .accordion-arrow {
+      color: var(--text-muted);
+      transition: transform 0.2s ease;
+    }
+
+    .accordion-card.open .accordion-arrow {
+      transform: rotate(180deg);
+      color: var(--text-main);
+    }
+
+    .accordion-body {
+      display: none;
+      padding: 1.25rem 1.5rem 1.5rem 1.5rem;
+      border-top: 1px solid var(--border-subtle);
+      background: var(--bg-card);
+      font-size: 0.9rem;
+      line-height: 1.6;
+      color: var(--text-secondary);
+    }
+
+    .accordion-card.open .accordion-body {
+      display: block;
+    }
+
+    /* Structured content inside Hypothesis */
+    .hypothesis-box {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .cause-chain {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.5rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+    }
+
+    .chain-node {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-subtle);
+      padding: 0.25rem 0.55rem;
+      border-radius: 4px;
+      color: var(--text-main);
+      font-weight: 600;
+    }
+
+    .chain-arrow {
+      color: var(--text-muted);
+    }
+
+    /* Structured content inside Actions */
+    .actions-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .action-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding: 0.75rem;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+    }
+
+    .action-step-num {
+      width: 22px;
+      height: 22px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-strong);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-main);
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .action-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
+    .action-title {
+      font-weight: 600;
+      color: var(--text-main);
+      font-size: 0.875rem;
+    }
+
+    .action-desc {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    .action-btn {
+      align-self: center;
+      font-family: inherit;
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.4rem 0.75rem;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      border: 1px solid var(--border-strong);
+      background: var(--bg-card);
+      color: var(--text-main);
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .action-btn:hover {
+      background: var(--text-main);
+      color: var(--bg-card);
+    }
+
+    .action-btn.primary {
+      background: #dc2626;
+      border-color: #dc2626;
+      color: #ffffff;
+    }
+
+    .action-btn.primary:hover {
+      background: #b91c1c;
+      border-color: #b91c1c;
+    }
+
+    /* Footer Notes */
+    .mock-footer-note {
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      padding: 1rem 0;
+    }
+
+    /* Comparison / Help callout */
+    .annotation-strip {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.65rem 1rem;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="mock-container">
+
+    <!-- Top Utility & Mode Switcher -->
+    <header class="toolbar-header">
+      <div class="toolbar-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+          <line x1="8" y1="21" x2="16" y2="21"></line>
+          <line x1="12" y1="17" x2="12" y2="21"></line>
+        </svg>
+        <span>TRAIAGE &bull; UI Mockup Review</span>
+      </div>
+
+      <div class="toolbar-actions">
+        <!-- Tab Switcher between List & Detailed View -->
+        <div class="tab-pills">
+          <button class="tab-btn active" id="btnShowList" onclick="showView('list')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="8" y1="6" x2="21" y2="6"></line>
+              <line x1="8" y1="12" x2="21" y2="12"></line>
+              <line x1="8" y1="18" x2="21" y2="18"></line>
+              <line x1="3" y1="6" x2="3.01" y2="6"></line>
+              <line x1="3" y1="12" x2="3.01" y2="12"></line>
+              <line x1="3" y1="18" x2="3.01" y2="18"></line>
+            </svg>
+            List View
+          </button>
+          <button class="tab-btn" id="btnShowDetail" onclick="showView('detail')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="3" y1="9" x2="21" y2="9"></line>
+              <line x1="9" y1="21" x2="9" y2="9"></line>
+            </svg>
+            Detailed View
+          </button>
+        </div>
+
+        <!-- Light / Dark Mode Toggle -->
+        <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle theme">
+          <span id="themeIcon">☀️</span>
+          <span id="themeLabel">Light</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Annotation banner -->
+    <div class="annotation-strip">
+      <span>📐 <strong>Clutter-Free Prototype:</strong> Exact high-polish representation of your two handwritten sketches.</span>
+      <span style="font-size: 0.75rem;">Click any row to drill down into Detailed View</span>
+    </div>
+
+    <!-- ========================================================
+         VIEW 1: GROUPED ALERTS (LIST VIEW)
+         ======================================================== -->
+    <main id="viewList" class="card-shell">
+      <div class="view-card-header">
+        <div class="view-title-group">
+          <h1>TOP 5 ALERTS</h1>
+        </div>
+        <div class="view-sub-label">
+          GROUPED ALERTS (List View)
+        </div>
+      </div>
+
+      <div class="alerts-list">
+        <!-- Row 1: Thermal Runaway -->
+        <div class="alert-row" onclick="showView('detail')">
+          <div class="severity-col">
+            <span class="badge badge-critical">CRITICAL</span>
+          </div>
+          <div class="title-col">
+            Thermal Runaway / Liquid Leak
+            <span class="target-hint">&bull; CDU-Rack 04</span>
+          </div>
+          <div class="status-col">
+            <span class="badge badge-assigned">ASSIGNED</span>
+            <span class="time-subtext">3hr ago</span>
+          </div>
+          <div class="count-col">
+            <span class="alert-count-pill">
+              5 Alerts
+              <svg class="chevron-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </span>
+          </div>
+        </div>
+
+        <!-- Row 2: Host Fatal Memory Crash -->
+        <div class="alert-row" onclick="showView('detail')">
+          <div class="severity-col">
+            <span class="badge badge-major">MAJOR</span>
+          </div>
+          <div class="title-col">
+            Host Fatal Memory Crash
+            <span class="target-hint">&bull; Node-07 ECC</span>
+          </div>
+          <div class="status-col">
+            <span class="badge badge-new">NEW</span>
+            <span class="time-subtext">20 min ago</span>
+          </div>
+          <div class="count-col">
+            <span class="alert-count-pill">
+              4 Alerts
+              <svg class="chevron-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </span>
+          </div>
+        </div>
+
+        <!-- Row 3: Optical Degradation -->
+        <div class="alert-row" onclick="showView('detail')">
+          <div class="severity-col">
+            <span class="badge badge-major">MAJOR</span>
+          </div>
+          <div class="title-col">
+            Optical degradation &amp; flap in Rack-12
+            <span class="target-hint">&bull; ToR-01</span>
+          </div>
+          <div class="status-col">
+            <span class="badge badge-unassigned">UNASSIGNED</span>
+            <span class="time-subtext">1 hr ago</span>
+          </div>
+          <div class="count-col">
+            <span class="alert-count-pill">
+              3 Alerts
+              <svg class="chevron-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </span>
+          </div>
+        </div>
+
+        <!-- Row 4: Branch Circuit Breaker Trip -->
+        <div class="alert-row" onclick="showView('detail')">
+          <div class="severity-col">
+            <span class="badge badge-major">MAJOR</span>
+          </div>
+          <div class="title-col">
+            Branch circuit Breaker Trip
+            <span class="target-hint">&bull; ePDU-A Branch 2</span>
+          </div>
+          <div class="status-col">
+            <span class="badge badge-new">NEW</span>
+            <span class="time-subtext">1 hr ago</span>
+          </div>
+          <div class="count-col">
+            <span class="alert-count-pill">
+              4 Alerts
+              <svg class="chevron-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </span>
+          </div>
+        </div>
+
+        <!-- Row 5: Rack Inlet Temperature Breach -->
+        <div class="alert-row" onclick="showView('detail')">
+          <div class="severity-col">
+            <span class="badge badge-minor">MINOR</span>
+          </div>
+          <div class="title-col">
+            Rack inlet Temperature Breach
+            <span class="target-hint">&bull; CRAH Zone A</span>
+          </div>
+          <div class="status-col">
+            <span class="badge badge-new">NEW</span>
+            <span class="time-subtext">2 hr ago</span>
+          </div>
+          <div class="count-col">
+            <span class="alert-count-pill">
+              2 Alerts
+              <svg class="chevron-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </span>
+          </div>
+        </div>
+      </div>
+    </main>
+
+
+    <!-- ========================================================
+         VIEW 2: GROUPED ALERTS (DETAILED VIEW)
+         ======================================================== -->
+    <main id="viewDetail" class="detail-view-container" style="display: none;">
+      
+      <!-- Back Navigation -->
+      <div class="nav-breadcrumb">
+        <button class="back-btn" onclick="showView('list')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          Back to Top 5 Alerts
+        </button>
+        <span>/</span>
+        <span>GROUPED ALERTS (DETAILED VIEW)</span>
+      </div>
+
+      <!-- Detail Header Card -->
+      <div class="card-shell detail-header-card">
+        <div class="detail-top-row">
+          <div class="detail-heading-cluster">
+            <span class="badge badge-critical" style="font-size: 0.8rem; padding: 0.35rem 0.75rem;">CRITICAL</span>
+            <h2>Thermal Runaway / Liquid Leak</h2>
+          </div>
+          <div class="detail-status-cluster">
+            <span class="badge badge-assigned" style="font-size: 0.8rem; padding: 0.35rem 0.75rem;">ASSIGNED</span>
+            <span class="time-subtext" style="font-size: 0.85rem;">3hr ago</span>
+          </div>
+        </div>
+
+        <!-- Location metadata row -->
+        <div class="location-banner">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+            <circle cx="12" cy="10" r="3"></circle>
+          </svg>
+          <span>Location: <strong>Row-03, Rack 04 (CDU-Rack 04)</strong></span>
+        </div>
+      </div>
+
+      <!-- Detail Narrative Box (The box labeled "Detail" in sketch) -->
+      <section class="detail-box-section">
+        <span class="section-mini-label">Detail</span>
+        <p class="detail-summary-text">
+          Direct Liquid Cooling (DLC) sensor triggered emergency leak alert at the secondary CDU manifold. 
+          Rapid loss of coolant flow precipitated an emergency thermal junction surge on Host Node-01 (GPU-3 HBM3 reached 98°C), causing hardware thermal shutdown (XID 79 bus detachment) and compensatory chassis fan ramp on adjacent compute nodes.
+        </p>
+        <div class="meta-metrics-row">
+          <div class="meta-metric-item">
+            <span class="meta-metric-label">Blast Radius</span>
+            <span class="meta-metric-value">Rack-04 (1 Sled Affected, 1 Offline)</span>
+          </div>
+          <div class="meta-metric-item">
+            <span class="meta-metric-label">Incident Owner</span>
+            <span class="meta-metric-value">Hardware Reliability SRE (On-Duty)</span>
+          </div>
+          <div class="meta-metric-item">
+            <span class="meta-metric-label">Cooling Loop</span>
+            <span class="meta-metric-value">CDU Secondary Loop B-04</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Alerts Sub-Table -->
+      <section class="alerts-table-section">
+        <div class="table-section-header">
+          <div class="table-section-title">
+            <span>Alerts</span>
+            <span class="table-badge-count">5 Correlated</span>
+          </div>
+          <span style="font-size: 0.78rem; color: var(--text-muted);">Sorted by causality timestamp</span>
+        </div>
+
+        <table class="sub-table">
+          <thead>
+            <tr>
+              <th style="width: 32%;">Message</th>
+              <th style="width: 14%;">Started</th>
+              <th style="width: 26%;">Location</th>
+              <th style="width: 14%;">Severity</th>
+              <th style="width: 14%;">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Leak detected</td>
+              <td class="mono-cell">06:15:22</td>
+              <td class="mono-cell">CDU Manifold #2</td>
+              <td><span class="badge badge-critical">Critical</span></td>
+              <td><span class="badge badge-assigned">Triggered</span></td>
+            </tr>
+            <tr>
+              <td>GPU3 reached 98C</td>
+              <td class="mono-cell">06:15:45</td>
+              <td class="mono-cell">Node-01, GPU-3</td>
+              <td><span class="badge badge-critical">Critical</span></td>
+              <td><span class="badge badge-assigned">Tripped</span></td>
+            </tr>
+            <tr>
+              <td>GPU3 fell off</td>
+              <td class="mono-cell">06:16:02</td>
+              <td class="mono-cell">Node-01 (XID 79)</td>
+              <td><span class="badge badge-critical">Critical</span></td>
+              <td><span class="badge badge-minor">Offline</span></td>
+            </tr>
+            <tr>
+              <td>Chassis fan speed boosted</td>
+              <td class="mono-cell">06:16:30</td>
+              <td class="mono-cell">Node-02, Fan Tray 2</td>
+              <td><span class="badge badge-major">Warning</span></td>
+              <td><span class="badge badge-new">Active</span></td>
+            </tr>
+            <tr>
+              <td>Coolant return flow restricted</td>
+              <td class="mono-cell">06:16:45</td>
+              <td class="mono-cell">CDU-Rack 04 Return</td>
+              <td><span class="badge badge-major">Warning</span></td>
+              <td><span class="badge badge-new">Active</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- Expandable Accordions -->
+      <section class="accordions-container">
+        
+        <!-- Accordion 1: ROOT CAUSE HYPOTHESIS -->
+        <div class="accordion-card open" id="accHypothesis">
+          <button class="accordion-trigger" onclick="toggleAccordion('accHypothesis')">
+            <div class="accordion-title-wrap">
+              <span class="accordion-title">Root Cause Hypothesis</span>
+              <span class="accordion-indicator-pill">94% Confidence</span>
+            </div>
+            <svg class="accordion-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+          <div class="accordion-body">
+            <div class="hypothesis-box">
+              <div class="cause-chain">
+                <span class="chain-node">CDU Quick-Disconnect Leak</span>
+                <span class="chain-arrow">&rarr;</span>
+                <span class="chain-node">Loop Depressurization</span>
+                <span class="chain-arrow">&rarr;</span>
+                <span class="chain-node">Node-01 Cold Plate Dryout</span>
+                <span class="chain-arrow">&rarr;</span>
+                <span class="chain-node">GPU-3 XID 79 Crash</span>
+              </div>
+              <p>
+                Telemetry topology correlation indicates the physical leak tape activation at CDU Manifold #2 preceded Node-01 GPU thermal runaway by <strong>23 seconds</strong>. The rapid temperature delta (&gt;4.2&deg;C/s) without corresponding ambient rack delta indicates localized liquid coolant starved at the supply branch rather than facility CRAH cooling degradation.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Accordion 2: SUGGESTED ACTIONS -->
+        <div class="accordion-card open" id="accActions">
+          <button class="accordion-trigger" onclick="toggleAccordion('accActions')">
+            <div class="accordion-title-wrap">
+              <span class="accordion-title">Suggested Actions</span>
+              <span class="accordion-indicator-pill">3 Playbook Steps</span>
+            </div>
+            <svg class="accordion-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+          <div class="accordion-body">
+            <div class="actions-list">
+              <div class="action-item">
+                <div class="action-step-num">1</div>
+                <div class="action-content">
+                  <div class="action-title">Isolate CDU Secondary Quick-Disconnect Valve B-2</div>
+                  <div class="action-desc">Prevent further coolant migration into the subfloor drip tray and prevent adjacent rack pump cavitation.</div>
+                </div>
+                <button class="action-btn primary">Dispatch Tech</button>
+              </div>
+
+              <div class="action-item">
+                <div class="action-step-num">2</div>
+                <div class="action-content">
+                  <div class="action-title">Quarantine &amp; Drain Node-01 Workloads</div>
+                  <div class="action-desc">Evacuate active GPU jobs to healthy compute nodes in Row-02 to prevent data corruption.</div>
+                </div>
+                <button class="action-btn">Evacuate Node</button>
+              </div>
+
+              <div class="action-item">
+                <div class="action-step-num">3</div>
+                <div class="action-content">
+                  <div class="action-title">Verify Subfloor Leak Sensor Float Switch</div>
+                  <div class="action-desc">Inspect physical leak containment barriers and confirm no electrical contact with PDU busbars.</div>
+                </div>
+                <button class="action-btn">Mark Checked</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <div class="mock-footer-note">
+        💡 Prototype built for review &bull; Designed to remain clean, clutter-free, and legible in high-pressure operations.
+      </div>
+
+    </main>
+
+  </div>
+
+  <script>
+    function showView(viewName) {
+      const listView = document.getElementById('viewList');
+      const detailView = document.getElementById('viewDetail');
+      const btnList = document.getElementById('btnShowList');
+      const btnDetail = document.getElementById('btnShowDetail');
+
+      if (viewName === 'list') {
+        listView.style.display = 'block';
+        detailView.style.display = 'none';
+        btnList.classList.add('active');
+        btnDetail.classList.remove('active');
+      } else {
+        listView.style.display = 'none';
+        detailView.style.display = 'flex';
+        btnList.classList.remove('active');
+        btnDetail.classList.add('active');
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function toggleAccordion(id) {
+      const card = document.getElementById(id);
+      card.classList.toggle('open');
+    }
+
+    function toggleTheme() {
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+      const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', nextTheme);
+      
+      const icon = document.getElementById('themeIcon');
+      const label = document.getElementById('themeLabel');
+      if (nextTheme === 'dark') {
+        icon.textContent = '🌙';
+        label.textContent = 'Dark';
+      } else {
+        icon.textContent = '☀️';
+        label.textContent = 'Light';
+      }
+    }
+  </script>
+</body>
+</html>
