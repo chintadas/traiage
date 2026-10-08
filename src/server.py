@@ -25,6 +25,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.middleware("http")
+async def no_cache_static(request, call_next):
+    """Make browsers revalidate frontend assets so UI edits appear on a plain refresh."""
+    response = await call_next(request)
+    response.headers["Cache-Control"] = "no-cache"
+    return response
+
 def load_seed_alerts() -> List[dict]:
     if not DATA_PATH.exists():
         return []

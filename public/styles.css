@@ -1631,12 +1631,22 @@ body {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  min-width: 0;
+}
+
+.title-col .title-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 
 .title-col .target-hint {
   color: var(--text-muted);
   font-size: 0.825rem;
   font-weight: 400;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .status-col {

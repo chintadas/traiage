@@ -572,10 +572,6 @@ function renderActiveIncChips() {
 function renderIncidents() {
   if (!incidentsListEl) return;
 
-  const badgeEl = document.getElementById('incidentListTotalBadge');
-  if (badgeEl) {
-    badgeEl.textContent = `${allIncidents.length} Incidents`;
-  }
   if (tabGroupedCountEl) {
     tabGroupedCountEl.textContent = allIncidents.length;
   }
@@ -606,15 +602,18 @@ function renderIncidents() {
     const stat = getStatusBadge(inc.status);
     const count = inc.alerts_count || (inc.dependent_alert_ids ? inc.dependent_alert_ids.length : 1);
     const timeAgo = formatRelativeTime(inc.latest_event_time || inc.first_event_time || inc.last_seen || inc.first_seen);
-    const locHint = inc.root_cause_location || inc.root_cause_component || '';
+    // Short target hint like the mock (e.g. "CDU-Rack04"): prefer the device in parentheses
+    const rawLoc = inc.root_cause_location || inc.root_cause_component || '';
+    const parenMatch = rawLoc.match(/\(([^)]+)\)\s*$/);
+    const locHint = parenMatch ? parenMatch[1] : rawLoc;
 
     return `
-      <div class="alert-row" onclick="window.location.href='incident.html?id=' + encodeURIComponent('${escapeHtml(inc.id)}')" title="Click to view details for ${escapeHtml(inc.title)}">
+      <div class="alert-row" onclick="window.location.href='incident.html?id=' + encodeURIComponent('${escapeHtml(inc.id)}')" title="${escapeHtml(inc.title)}">
         <div class="severity-col">
           <span class="badge badge-${sev.class}">${sev.label}</span>
         </div>
         <div class="title-col">
-          ${escapeHtml(inc.title)}
+          <span class="title-text">${escapeHtml(inc.title)}</span>
           ${locHint ? `<span class="target-hint">&bull; ${escapeHtml(locHint)}</span>` : ''}
         </div>
         <div class="status-col">
@@ -623,7 +622,7 @@ function renderIncidents() {
         </div>
         <div class="count-col">
           <span class="alert-count-pill">
-            ${count} Alerts
+            ${count} ${count === 1 ? 'Alert' : 'Alerts'}
             <svg class="chevron-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <polyline points="9 18 15 12 9 6"></polyline>
             </svg>
