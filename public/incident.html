@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Incident Details - TRAIAGE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Top Nav Bar -->
+  <header class="top-nav">
+    <div class="nav-brand">
+      <a href="index.html" style="text-decoration: none; color: inherit; display: flex; align-items: center; gap: 0.75rem;">
+        <div class="brand-icon">
+          <span class="pulse-dot"></span>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/>
+            <path d="m8 19 4-4 4 4"/>
+            <path d="M12 15v8"/>
+          </svg>
+        </div>
+        <div>
+          <div class="brand-title">TRAIAGE <span>OPS CONSOLE</span></div>
+          <div class="brand-sub">DC-West-01 Telemetry Stream &bull; Redfish v1.7.0</div>
+        </div>
+      </a>
+    </div>
+
+    <!-- View Switcher Tabs linking back to index.html -->
+    <div class="view-tabs">
+      <a href="index.html" class="view-tab active" style="text-decoration: none;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+          <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+        </svg>
+        Grouped Incidents View
+      </a>
+      <a href="index.html#raw" class="view-tab" style="text-decoration: none;" onclick="localStorage.setItem('traiage_default_view', 'raw')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="8" y1="6" x2="21" y2="6"></line>
+          <line x1="8" y1="12" x2="21" y2="12"></line>
+          <line x1="8" y1="18" x2="21" y2="18"></line>
+          <line x1="3" y1="6" x2="3.01" y2="6"></line>
+          <line x1="3" y1="12" x2="3.01" y2="12"></line>
+          <line x1="3" y1="18" x2="3.01" y2="18"></line>
+        </svg>
+        Raw Alerts View
+      </a>
+    </div>
+  </header>
+
+  <!-- Detailed Incident Page Container -->
+  <main class="detail-page-container">
+    
+    <!-- Dynamic Breadcrumb Navigation -->
+    <nav class="nav-breadcrumb" aria-label="Breadcrumb">
+      <a class="back-btn" href="index.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+        Back to Top Alerts
+      </a>
+      <span>/</span>
+      <span class="breadcrumb-active-item" id="breadcrumbIncidentTitle">Loading...</span>
+    </nav>
+
+    <!-- Merged Header & Detail Card -->
+    <section class="card-shell detail-header-card">
+      <div class="detail-top-row">
+        <div class="detail-heading-cluster">
+          <span class="badge" id="incidentSeverityBadge">P1</span>
+          <h2 id="incidentTitle">Loading incident title...</h2>
+        </div>
+        <div class="detail-status-cluster">
+          <span class="badge badge-assigned" id="incidentStatusBadge">ASSIGNED</span>
+          <span class="time-subtext" id="incidentTimeAgo">—</span>
+        </div>
+      </div>
+
+      <!-- Location metadata banner -->
+      <div class="location-banner">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+          <circle cx="12" cy="10" r="3"></circle>
+        </svg>
+        <span>Location: <strong id="incidentLocation">Fetching...</strong></span>
+      </div>
+
+      <!-- Detail Narrative Block -->
+      <div class="detail-narrative-block">
+        <span class="section-mini-label">Detail</span>
+        <p class="detail-summary-text" id="incidentDetailSummary">
+          Analyzing telemetry alerts and topological dependencies...
+        </p>
+      </div>
+    </section>
+
+    <!-- Correlated Alerts Sub-Table Section -->
+    <section class="alerts-table-section">
+      <div class="table-section-header">
+        <div class="table-section-title">
+          <span>Alerts</span>
+          <span class="table-badge-count" id="alertsCountBadge">--</span>
+        </div>
+        <span style="font-size: 0.78rem; color: var(--text-muted);">Sorted chronologically by event timestamp</span>
+      </div>
+
+      <table class="sub-table" id="alertsTable">
+        <thead>
+          <tr>
+            <th style="width: 34%;">Message</th>
+            <th style="width: 14%;">Started</th>
+            <th style="width: 26%;">Location</th>
+            <th style="width: 13%;">Severity</th>
+            <th style="width: 13%;">Status</th>
+          </tr>
+        </thead>
+        <tbody id="alertsTableBody">
+          <!-- Populated by incident.js -->
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Expandable Accordions -->
+    <section class="accordions-container">
+      
+      <!-- Accordion 1: Root Cause Hypothesis -->
+      <div class="accordion-card open" id="accHypothesis">
+        <button class="accordion-trigger" onclick="toggleAccordion('accHypothesis')">
+          <div class="accordion-title-wrap">
+            <span class="accordion-title">Root Cause Hypothesis</span>
+            <span class="accordion-indicator-pill" id="hypothesisConfidenceBadge">Correlated Vector</span>
+          </div>
+          <svg class="accordion-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </button>
+        <div class="accordion-body">
+          <div class="hypothesis-box">
+            <div class="cause-chain" id="causeChainContainer">
+              <!-- Rendered by incident.js -->
+            </div>
+            <p id="hypothesisText">
+              Evaluating root cause hypothesis...
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Accordion 2: Suggested Actions -->
+      <div class="accordion-card open" id="accActions">
+        <button class="accordion-trigger" onclick="toggleAccordion('accActions')">
+          <div class="accordion-title-wrap">
+            <span class="accordion-title">Suggested Actions</span>
+            <span class="accordion-indicator-pill" id="actionsCountBadge">Runbook</span>
+          </div>
+          <svg class="accordion-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </button>
+        <div class="accordion-body">
+          <div class="actions-list" id="actionsListContainer">
+            <!-- Rendered by incident.js -->
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Slide-out Drawer: Redfish Resource Inspector -->
+  <aside id="inspectorDrawer" class="inspector-drawer">
+    <div class="drawer-header">
+      <div>
+        <div class="drawer-subtitle">DMTF REDFISH EVENT INSPECTOR</div>
+        <div class="drawer-title" id="drawerEventId">EVT-0001</div>
+      </div>
+      <button id="closeDrawerBtn" class="btn-close" aria-label="Close Inspector">&times;</button>
+    </div>
+
+    <div class="drawer-content" id="drawerContent">
+      <!-- Injected by JavaScript -->
+    </div>
+  </aside>
+
+  <!-- Backdrop overlay -->
+  <div id="drawerBackdrop" class="drawer-backdrop"></div>
+
+  <!-- Toast Notification -->
+  <div id="toastNotification" class="toast">Action updated</div>
+
+  <script src="incident.js"></script>
+</body>
+</html>

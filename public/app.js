@@ -572,213 +572,64 @@ function renderActiveIncChips() {
 function renderIncidents() {
   if (!incidentsListEl) return;
 
-  if (filteredIncidents.length === 0) {
-    incidentsListEl.innerHTML = '';
-    if (emptyIncStateEl) emptyIncStateEl.style.display = 'block';
+  const badgeEl = document.getElementById('incidentListTotalBadge');
+  if (badgeEl) {
+    badgeEl.textContent = `${allIncidents.length} Incidents`;
+  }
+  if (tabGroupedCountEl) {
+    tabGroupedCountEl.textContent = allIncidents.length;
+  }
+
+  if (allIncidents.length === 0) {
+    incidentsListEl.innerHTML = '<div style="padding: 2.5rem; text-align: center; color: var(--text-muted);">No incidents currently correlated.</div>';
     return;
   }
 
-  if (emptyIncStateEl) emptyIncStateEl.style.display = 'none';
-
-  const categoryIcons = {
-    LiquidCooling: '💧',
-    Power: '⚡',
-    NetworkFabric: '🌐',
-    ComputeHost: '🖥️',
-    Storage: '💾',
-    Environmental: '🌡️',
-    Management: '⚙️'
+  const prioToSeverity = {
+    P1: { label: 'CRITICAL', class: 'critical' },
+    P2: { label: 'MAJOR', class: 'major' },
+    P3: { label: 'MINOR', class: 'minor' },
+    P4: { label: 'INFO', class: 'info' }
   };
 
-  const html = filteredIncidents.map(inc => {
-    const prioLower = inc.priority.toLowerCase();
-    const catIcon = categoryIcons[inc.category] || '⚠️';
-    const statusLower = inc.status.toLowerCase();
-    
-    // Timing
-    const timeFormatted = formatTime(inc.first_event_time);
-    const latestFormatted = formatTime(inc.latest_event_time);
-    const durationText = inc.first_event_time !== inc.latest_event_time
-      ? `Span: ${timeFormatted.time} → ${latestFormatted.time}`
-      : `Triggered: ${timeFormatted.time}`;
+  const getStatusBadge = (status) => {
+    const s = (status || '').toLowerCase();
+    if (s === 'assigned' || s === 'investigating') return { label: 'ASSIGNED', class: 'assigned' };
+    if (s === 'acknowledged') return { label: 'ACKNOWLEDGED', class: 'assigned' };
+    if (s === 'resolved') return { label: 'RESOLVED', class: 'resolved' };
+    if (s === 'unassigned') return { label: 'UNASSIGNED', class: 'unassigned' };
+    return { label: 'NEW', class: 'new' };
+  };
 
-    // Playbook steps HTML
-    const playbookHtml = (inc.dispatch_playbook || []).map((step, idx) => `
-      <li class="playbook-step">
-        <span class="step-num">${idx + 1}</span>
-        <span>${escapeHtml(step)}</span>
-      </li>
-    `).join('');
-
-    // Correlated Alerts table rows
-    const childRowsHtml = (inc.dependent_alert_ids || []).map(alertId => {
-      const alertObj = allAlerts.find(a => a.EventId === alertId);
-      const isRoot = alertId === inc.root_cause_alert_id;
-      const sev = alertObj ? alertObj.Severity : 'Warning';
-      const msg = alertObj ? alertObj.Message : alertId;
-      const timeStr = alertObj ? formatRelativeTime(alertObj.Timestamp) : '—';
-
-      return `
-        <tr class="child-alert-row ${isRoot ? 'is-root' : ''}" onclick="openInspector('${escapeHtml(alertId)}')" title="Click to inspect ${escapeHtml(alertId)}">
-          <td style="font-family: var(--font-mono); font-weight: 600; white-space: nowrap;">
-            ${escapeHtml(alertId)}
-            ${isRoot ? '<span class="root-indicator-pill">Root Cause</span>' : ''}
-          </td>
-          <td style="max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(msg)}">
-            ${escapeHtml(msg)}
-          </td>
-          <td>
-            <span class="badge badge-${sev.toLowerCase()}">${sev}</span>
-          </td>
-          <td style="color: var(--text-muted); white-space: nowrap;">${timeStr}</td>
-        </tr>
-      `;
-    }).join('');
-
-    // Action button based on status
-    let actionBtnHtml = '';
-    if (inc.status === 'Active') {
-      actionBtnHtml = `<button class="btn-ack" onclick="updateIncidentStatus('${escapeHtml(inc.id)}', 'Acknowledged')">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="20 6 9 17 4 12"></polyline>
-        </svg>
-        Acknowledge
-      </button>`;
-    } else if (inc.status === 'Acknowledged') {
-      actionBtnHtml = `<button class="btn-ack" style="color: #6ee7b7; border-color: rgba(16, 185, 129, 0.4);" onclick="updateIncidentStatus('${escapeHtml(inc.id)}', 'Resolved')">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-          <polyline points="22 4 12 14.01 9 11.01"></polyline>
-        </svg>
-        Mark Resolved
-      </button>`;
-    }
+  const html = allIncidents.map(inc => {
+    const sev = prioToSeverity[inc.priority] || { label: inc.priority || 'INFO', class: 'info' };
+    const stat = getStatusBadge(inc.status);
+    const count = inc.alerts_count || (inc.dependent_alert_ids ? inc.dependent_alert_ids.length : 1);
+    const timeAgo = formatRelativeTime(inc.latest_event_time || inc.first_event_time || inc.last_seen || inc.first_seen);
+    const locHint = inc.root_cause_location || inc.root_cause_component || '';
 
     return `
-      <article class="incident-card priority-${prioLower}" id="card-${escapeHtml(inc.id)}">
-        <!-- Top Header -->
-        <div class="incident-header">
-          <div class="incident-header-left">
-            <span class="priority-badge ${prioLower}">
-              ${prioLower === 'p1' ? '<span class="alert-pulse red"></span>' : ''}
-              ${prioLower === 'p2' ? '<span class="alert-pulse amber"></span>' : ''}
-              ${escapeHtml(inc.priority)} CRITICAL
-            </span>
-            <span class="incident-id">${escapeHtml(inc.id)}</span>
-            <span class="category-chip">${catIcon} ${escapeHtml(inc.category)}</span>
-            <span class="status-badge ${statusLower}">${escapeHtml(inc.status)}</span>
-          </div>
-          <div class="incident-header-right">
-            ${actionBtnHtml}
-          </div>
+      <div class="alert-row" onclick="window.location.href='incident.html?id=' + encodeURIComponent('${escapeHtml(inc.id)}')" title="Click to view details for ${escapeHtml(inc.title)}">
+        <div class="severity-col">
+          <span class="badge badge-${sev.class}">${sev.label}</span>
         </div>
-
-        <!-- Title & Timing -->
-        <div class="incident-title-row">
-          <h2 class="incident-title">${escapeHtml(inc.title)}</h2>
-          <div class="incident-timing">
-            <div class="timing-item">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"></circle>
-                <polyline points="12 6 12 12 16 14"></polyline>
-              </svg>
-              <span>First seen: ${timeFormatted.relative} (${timeFormatted.time})</span>
-            </div>
-            <div class="timing-item">
-              <span style="color: var(--color-cyan);">⚡ ${inc.dependent_alerts_count} Correlated Redfish Alerts</span>
-            </div>
-          </div>
+        <div class="title-col">
+          ${escapeHtml(inc.title)}
+          ${locHint ? `<span class="target-hint">&bull; ${escapeHtml(locHint)}</span>` : ''}
         </div>
-
-        <!-- Correlated Alerts Pane (First pane before AI Root-Cause Hypothesis) -->
-        <div class="correlated-alerts-section">
-          <div class="correlated-alerts-toggle" id="toggle-btn-${escapeHtml(inc.id)}" onclick="toggleCorrelatedAlerts('${escapeHtml(inc.id)}')">
-            <div class="toggle-left">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
-              </svg>
-              <span>Correlated Redfish Alerts (${inc.dependent_alerts_count})</span>
-            </div>
-            <svg class="toggle-icon" id="toggle-icon-${escapeHtml(inc.id)}" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="6 9 12 15 18 9"></polyline>
+        <div class="status-col">
+          <span class="badge badge-${stat.class}">${stat.label}</span>
+          <span class="time-subtext">${timeAgo}</span>
+        </div>
+        <div class="count-col">
+          <span class="alert-count-pill">
+            ${count} Alerts
+            <svg class="chevron-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="9 18 15 12 9 6"></polyline>
             </svg>
-          </div>
-
-          <div class="correlated-alerts-panel" id="panel-${escapeHtml(inc.id)}">
-            <table class="child-alerts-table">
-              <thead>
-                <tr>
-                  <th>Alert ID</th>
-                  <th>Message</th>
-                  <th>Severity</th>
-                  <th>Age</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${childRowsHtml}
-              </tbody>
-            </table>
-          </div>
+          </span>
         </div>
-
-        <!-- Hypothesis Callout Panel -->
-        <div class="hypothesis-panel">
-          <div class="hypothesis-header">
-            <div class="hypothesis-tag">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"></circle>
-                <line x1="12" y1="16" x2="12" y2="12"></line>
-                <line x1="12" y1="8" x2="12.01" y2="8"></line>
-              </svg>
-              AI Root-Cause Hypothesis & Topology Traversal
-            </div>
-            <button class="btn-inspect-root" onclick="openInspector('${escapeHtml(inc.root_cause_alert_id)}')">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                <circle cx="12" cy="12" r="3"></circle>
-              </svg>
-              Inspect Root Alert (${escapeHtml(inc.root_cause_alert_id)})
-            </button>
-          </div>
-          <p class="hypothesis-text">${escapeHtml(inc.root_cause_hypothesis)}</p>
-          <div class="root-cause-meta">
-            <div class="root-cause-node">
-              <span>Originating Node:</span>
-              <span class="node-highlight">${escapeHtml(inc.root_cause_component)}</span>
-            </div>
-            <div class="root-cause-node">
-              <span>Location:</span>
-              <span style="color: #cbd5e1;">${escapeHtml(inc.root_cause_location)}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Dispatch & Playbook (Collapsed by default) -->
-        <div class="dispatch-section">
-          <div class="dispatch-header">
-            <div class="dispatch-target-badge">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                <circle cx="9" cy="7" r="4"></circle>
-                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-              </svg>
-              Dispatch: ${escapeHtml(inc.dispatch_target)}
-            </div>
-            <button class="playbook-toggle-btn" id="playbook-toggle-${escapeHtml(inc.id)}" onclick="togglePlaybook('${escapeHtml(inc.id)}')">
-              <span>Operational Playbook (${(inc.dispatch_playbook || []).length} steps)</span>
-              <svg class="playbook-toggle-icon" id="playbook-icon-${escapeHtml(inc.id)}" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="6 9 12 15 18 9"></polyline>
-              </svg>
-            </button>
-          </div>
-          <div class="playbook-panel" id="playbook-panel-${escapeHtml(inc.id)}">
-            <ul class="playbook-list">
-              ${playbookHtml}
-            </ul>
-          </div>
-        </div>
-      </article>
+      </div>
     `;
   }).join('');
 
