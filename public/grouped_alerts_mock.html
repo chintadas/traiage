@@ -470,12 +470,10 @@
       color: var(--text-main);
     }
 
-    /* Detail Narrative Box (The box labeled "Detail" in sketch) */
-    .detail-box-section {
-      padding: 1.25rem 1.5rem;
-      background: var(--bg-card);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-lg);
+    /* Detail Narrative Box inside the merged card */
+    .detail-narrative-block {
+      border-top: 1px solid var(--border-subtle);
+      padding-top: 1rem;
       display: flex;
       flex-direction: column;
       gap: 0.5rem;
@@ -493,33 +491,6 @@
       font-size: 0.925rem;
       line-height: 1.6;
       color: var(--text-main);
-    }
-
-    .meta-metrics-row {
-      display: flex;
-      gap: 1.5rem;
-      padding-top: 0.75rem;
-      border-top: 1px solid var(--border-subtle);
-      margin-top: 0.25rem;
-    }
-
-    .meta-metric-item {
-      display: flex;
-      flex-direction: column;
-      gap: 0.15rem;
-    }
-
-    .meta-metric-label {
-      font-size: 0.7rem;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      font-weight: 600;
-    }
-
-    .meta-metric-value {
-      font-size: 0.825rem;
-      font-weight: 600;
-      color: var(--text-secondary);
     }
 
     /* Alerts Sub-Table Section */
@@ -879,11 +850,7 @@
       </div>
     </header>
 
-    <!-- Annotation banner -->
-    <div class="annotation-strip">
-      <span>📐 <strong>Clutter-Free Prototype:</strong> Exact high-polish representation of your two handwritten sketches.</span>
-      <span style="font-size: 0.75rem;">Click any row to drill down into Detailed View</span>
-    </div>
+
 
     <!-- ========================================================
          VIEW 1: GROUPED ALERTS (LIST VIEW)
@@ -893,14 +860,11 @@
         <div class="view-title-group">
           <h1>TOP 5 ALERTS</h1>
         </div>
-        <div class="view-sub-label">
-          GROUPED ALERTS (List View)
-        </div>
       </div>
 
       <div class="alerts-list">
         <!-- Row 1: Thermal Runaway -->
-        <div class="alert-row" onclick="showView('detail')">
+        <div class="alert-row" onclick="showView('detail', 'Thermal Runaway / Liquid Leak')">
           <div class="severity-col">
             <span class="badge badge-critical">CRITICAL</span>
           </div>
@@ -921,7 +885,7 @@
         </div>
 
         <!-- Row 2: Host Fatal Memory Crash -->
-        <div class="alert-row" onclick="showView('detail')">
+        <div class="alert-row" onclick="showView('detail', 'Host Fatal Memory Crash')">
           <div class="severity-col">
             <span class="badge badge-major">MAJOR</span>
           </div>
@@ -942,7 +906,7 @@
         </div>
 
         <!-- Row 3: Optical Degradation -->
-        <div class="alert-row" onclick="showView('detail')">
+        <div class="alert-row" onclick="showView('detail', 'Optical degradation &amp; flap in Rack-12')">
           <div class="severity-col">
             <span class="badge badge-major">MAJOR</span>
           </div>
@@ -963,7 +927,7 @@
         </div>
 
         <!-- Row 4: Branch Circuit Breaker Trip -->
-        <div class="alert-row" onclick="showView('detail')">
+        <div class="alert-row" onclick="showView('detail', 'Branch circuit Breaker Trip')">
           <div class="severity-col">
             <span class="badge badge-major">MAJOR</span>
           </div>
@@ -984,7 +948,7 @@
         </div>
 
         <!-- Row 5: Rack Inlet Temperature Breach -->
-        <div class="alert-row" onclick="showView('detail')">
+        <div class="alert-row" onclick="showView('detail', 'Rack inlet Temperature Breach')">
           <div class="severity-col">
             <span class="badge badge-minor">MINOR</span>
           </div>
@@ -1019,15 +983,15 @@
           Back to Top 5 Alerts
         </button>
         <span>/</span>
-        <span>GROUPED ALERTS (DETAILED VIEW)</span>
+        <span id="breadcrumbAlertTitle" style="font-weight: 500; color: var(--text-main);">Thermal Runaway / Liquid Leak</span>
       </div>
 
-      <!-- Detail Header Card -->
+      <!-- Merged Header & Detail Card -->
       <div class="card-shell detail-header-card">
         <div class="detail-top-row">
           <div class="detail-heading-cluster">
             <span class="badge badge-critical" style="font-size: 0.8rem; padding: 0.35rem 0.75rem;">CRITICAL</span>
-            <h2>Thermal Runaway / Liquid Leak</h2>
+            <h2 id="detailAlertTitle">Thermal Runaway / Liquid Leak</h2>
           </div>
           <div class="detail-status-cluster">
             <span class="badge badge-assigned" style="font-size: 0.8rem; padding: 0.35rem 0.75rem;">ASSIGNED</span>
@@ -1043,30 +1007,16 @@
           </svg>
           <span>Location: <strong>Row-03, Rack 04 (CDU-Rack 04)</strong></span>
         </div>
-      </div>
 
-      <!-- Detail Narrative Box (The box labeled "Detail" in sketch) -->
-      <section class="detail-box-section">
-        <span class="section-mini-label">Detail</span>
-        <p class="detail-summary-text">
-          Direct Liquid Cooling (DLC) sensor triggered emergency leak alert at the secondary CDU manifold. 
-          Rapid loss of coolant flow precipitated an emergency thermal junction surge on Host Node-01 (GPU-3 HBM3 reached 98°C), causing hardware thermal shutdown (XID 79 bus detachment) and compensatory chassis fan ramp on adjacent compute nodes.
-        </p>
-        <div class="meta-metrics-row">
-          <div class="meta-metric-item">
-            <span class="meta-metric-label">Blast Radius</span>
-            <span class="meta-metric-value">Rack-04 (1 Sled Affected, 1 Offline)</span>
-          </div>
-          <div class="meta-metric-item">
-            <span class="meta-metric-label">Incident Owner</span>
-            <span class="meta-metric-value">Hardware Reliability SRE (On-Duty)</span>
-          </div>
-          <div class="meta-metric-item">
-            <span class="meta-metric-label">Cooling Loop</span>
-            <span class="meta-metric-value">CDU Secondary Loop B-04</span>
-          </div>
+        <!-- Detail Narrative Block -->
+        <div class="detail-narrative-block">
+          <span class="section-mini-label">Detail</span>
+          <p class="detail-summary-text">
+            Direct Liquid Cooling (DLC) sensor triggered emergency leak alert at the secondary CDU manifold. 
+            Rapid loss of coolant flow precipitated an emergency thermal junction surge on Host Node-01 (GPU-3 HBM3 reached 98°C), causing hardware thermal shutdown (XID 79 bus detachment) and compensatory chassis fan ramp on adjacent compute nodes.
+          </p>
         </div>
-      </section>
+      </div>
 
       <!-- Alerts Sub-Table -->
       <section class="alerts-table-section">
@@ -1214,7 +1164,7 @@
   </div>
 
   <script>
-    function showView(viewName) {
+    function showView(viewName, alertTitle) {
       const listView = document.getElementById('viewList');
       const detailView = document.getElementById('viewDetail');
       const btnList = document.getElementById('btnShowList');
@@ -1226,6 +1176,12 @@
         btnList.classList.add('active');
         btnDetail.classList.remove('active');
       } else {
+        if (alertTitle) {
+          const breadcrumb = document.getElementById('breadcrumbAlertTitle');
+          const title = document.getElementById('detailAlertTitle');
+          if (breadcrumb) breadcrumb.textContent = alertTitle;
+          if (title) title.textContent = alertTitle;
+        }
         listView.style.display = 'none';
         detailView.style.display = 'flex';
         btnList.classList.remove('active');
