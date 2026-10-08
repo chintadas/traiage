@@ -29,7 +29,16 @@
 
     <!-- View Switcher -->
     <div class="view-tabs">
-      <button class="view-tab active" id="tabRawAlerts">
+      <button class="view-tab active" id="tabGroupedAlerts" title="Correlated Incidents View">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+          <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+        </svg>
+        Grouped Incidents View
+        <span class="tab-badge" id="tabGroupedCount" style="background: rgba(139, 92, 246, 0.25); color: #c4b5fd;">--</span>
+      </button>
+
+      <button class="view-tab" id="tabRawAlerts">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="8" y1="6" x2="21" y2="6"></line>
           <line x1="8" y1="12" x2="21" y2="12"></line>
@@ -41,21 +50,6 @@
         Raw Alerts View
         <span class="tab-badge" id="tabRawCount">20</span>
       </button>
-
-      <button class="view-tab" id="tabGroupedAlerts" title="Correlated Incidents View">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
-          <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
-        </svg>
-        Grouped Incidents View
-        <span class="tab-badge" id="tabGroupedCount" style="background: rgba(139, 92, 246, 0.25); color: #c4b5fd;">--</span>
-      </button>
-    </div>
-
-    <!-- Connection Status -->
-    <div class="status-indicator">
-      <span class="status-dot"></span>
-      <span class="status-text">FEED ACTIVE</span>
     </div>
   </header>
 
@@ -63,7 +57,7 @@
   <main class="dashboard-container">
 
     <!-- VIEW 1: RAW ALERTS -->
-    <section id="rawAlertsView" class="view-panel active">
+    <section id="rawAlertsView" class="view-panel" style="display: none;">
 
     <!-- KPI Metric Cards -->
     <section class="kpi-grid">
@@ -198,7 +192,7 @@
     </section> <!-- End rawAlertsView -->
 
     <!-- VIEW 2: GROUPED INCIDENTS -->
-    <section id="groupedIncidentsView" class="view-panel" style="display: none;">
+    <section id="groupedIncidentsView" class="view-panel active">
       <!-- Incidents KPI Ribbon -->
       <section class="kpi-grid">
         <div class="kpi-card" data-priority-filter="all">

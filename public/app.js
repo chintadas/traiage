@@ -109,6 +109,7 @@ async function init() {
   await loadStats();
   await loadAlerts();
   await loadIncidents();
+  switchView('grouped');
 }
 
 // Load Telemetry Stats
