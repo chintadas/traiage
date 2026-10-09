@@ -147,6 +147,7 @@ def test_get_datasets_and_switch():
     ids = [x["id"] for x in d["datasets"]]
     assert "seed_20" in ids
     assert "synthetic_1000" in ids
+    assert "synthetic_10000" in ids
 
     # 2. Switch to synthetic_1000
     switch_res = client.post("/api/datasets/active", json={"dataset": "synthetic_1000"})
@@ -156,12 +157,20 @@ def test_get_datasets_and_switch():
     assert s_data["alerts_count"] == 1000
     assert s_data["incidents_count"] > 10
 
-    # Verify /api/stats reflects 1000 alerts
+    # 3. Switch to synthetic_10000
+    switch10k_res = client.post("/api/datasets/active", json={"dataset": "synthetic_10000"})
+    assert switch10k_res.status_code == 200
+    s10k_data = switch10k_res.json()
+    assert s10k_data["active"] == "synthetic_10000"
+    assert s10k_data["alerts_count"] == 10000
+    assert s10k_data["incidents_count"] >= 10
+
+    # Verify /api/stats reflects 10,000 alerts
     stats_res = client.get("/api/stats")
     assert stats_res.status_code == 200
-    assert stats_res.json()["total"] == 1000
+    assert stats_res.json()["total"] == 10000
 
-    # 3. Switch back to seed_20
+    # 4. Switch back to seed_20
     back_res = client.post("/api/datasets/active", json={"dataset": "seed_20"})
     assert back_res.status_code == 200
     b_data = back_res.json()

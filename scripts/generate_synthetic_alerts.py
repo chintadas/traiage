@@ -1,21 +1,25 @@
 #!/usr/bin/env python3
 """
 Synthetic Redfish Telemetry Generator for TRAIAGE
-Generates 1,000 realistic DMTF Redfish alerts covering cascading failures,
-correlated incident storms, and background data center noise.
+Generates realistic DMTF Redfish alerts covering cascading failures,
+correlated incident storms, and background data center noise over configurable
+alert counts and time horizons (e.g. 1,000 or 10,000 alerts over 24 hours).
 """
 
+import sys
 import json
-import random
+import argparse
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
-OUTPUT_FILE = DATA_DIR / "synthetic_1000_alerts.json"
 
-def generate_1000_alerts():
-    base_time = datetime(2026, 9, 8, 6, 0, 0, tzinfo=timezone.utc)
+def generate_dataset(total_count: int = 10000, duration_hours: int = 24, output_file: Path = None):
+    if output_file is None:
+        output_file = DATA_DIR / f"synthetic_{total_count}_alerts.json"
+
+    base_time = datetime(2026, 9, 8, 0, 0, 0, tzinfo=timezone.utc)
     events = []
     evt_num = 1
 
@@ -35,7 +39,7 @@ def generate_1000_alerts():
     ):
         nonlocal evt_num
         event = {
-            "EventId": f"EVT-20260908-{evt_num:04d}",
+            "EventId": f"EVT-20260908-{evt_num:05d}",
             "Timestamp": dt.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "Severity": severity,
             "MessageId": message_id,
@@ -56,358 +60,188 @@ def generate_1000_alerts():
         evt_num += 1
         return event
 
-    # =========================================================================
-    # STORM 1: Direct Liquid Cooling Leak & Thermal Runaway in Rack-04 (120 alerts)
-    # Starts at 06:15:00
-    # =========================================================================
-    t1 = base_time + timedelta(minutes=15)
-    # Root: CDU Leak detection
-    events.append(make_event(
-        t1, "Critical", "Thermal.1.0.CoolantLeakDetected",
-        "Liquid cooling leak detection loop #2 resistance dropped below threshold (liquid detected) at CDU manifold.",
-        ["2", "CDU manifold"],
-        "/redfish/v1/Chassis/dc1-row02-rack04/ThermalSubsystem/LeakDetection/Tape2",
-        "Row-02", "Rack-04", "CDU-Rack04", "U01-U04", "DirectLiquidCooling",
-        "Dispatch facilities technician immediately. Inspect quick-disconnect valves and manifold joints in Rack-04."
-    ))
+    racks = ["Rack-01", "Rack-02", "Rack-04", "Rack-05", "Rack-08", "Rack-10", "Rack-12", "Rack-15"]
+    rows = ["Row-01", "Row-02", "Row-03", "Row-04"]
 
-    # Cascade 1: Secondary supply pressure drop
-    events.append(make_event(
-        t1 + timedelta(seconds=12), "Warning", "Sensor.1.0.CoolantPressureLow",
-        "CDU secondary supply pressure dropped to 0.82 bar (nominal 1.60 bar). Flow rate declining.",
-        ["0.82 bar", "1.60 bar"],
-        "/redfish/v1/Chassis/dc1-row02-rack04/ThermalSubsystem/Sensors/CDU_Pressure",
-        "Row-02", "Rack-04", "CDU-Rack04", "U01-U04", "DirectLiquidCooling",
-        "Verify pump variable frequency drive status and check expansion reservoir level."
-    ))
+    # Ratio of cascade storm events vs background telemetry
+    # For 10,000 alerts: ~35% cascade storm events (~3,500), ~65% background noise (~6,500)
+    storm_target = int(total_count * 0.35)
+    
+    # We will generate 10 distinct cascade incident storms spread across the 24h window
+    storm_start_hours = [1.25, 3.5, 6.0, 8.75, 11.2, 13.5, 15.8, 18.25, 20.5, 22.1]
+    alerts_per_storm = storm_target // len(storm_start_hours)
 
-    # Cascade 2: HGX-H100 Nodes 01, 02, 03 GPU temperatures spike and throttle
-    nodes_rack04 = [("HGX-H100-Node01", "dc1-row02-rack04-node01", "U12-U17"),
-                    ("HGX-H100-Node02", "dc1-row02-rack04-node02", "U18-U23"),
-                    ("HGX-H100-Node03", "dc1-row02-rack04-node03", "U24-U29")]
+    for storm_idx, start_hour in enumerate(storm_start_hours):
+        s_base = base_time + timedelta(hours=start_hour)
+        storm_type = storm_idx % 6
 
-    for offset, (chassis, uri_part, slot) in enumerate(nodes_rack04):
-        node_t = t1 + timedelta(seconds=25 + offset * 18)
-        for gpu_idx in range(8):
-            g_time = node_t + timedelta(seconds=gpu_idx * 3)
-            temp = 92 + gpu_idx + offset
+        if storm_type == 0:
+            # Direct Liquid Cooling Leak & GPU Thermal Runaway Cascade (Rack-04)
             events.append(make_event(
-                g_time, "Critical", "Oem.Nvidia.GpuJunctionThermalThresholdExceeded",
-                f"GPU {gpu_idx} (SXM5 H100) HBM3 temperature reached {temp}C, exceeding critical threshold of 95C.",
-                [str(gpu_idx), "SXM5 H100", f"{temp}C", "95C"],
-                f"/redfish/v1/Systems/{uri_part}/Processors/GPU{gpu_idx}/ThermalMetrics",
-                "Row-02", "Rack-04", chassis, slot, "AI-Accelerator",
-                "Throttle or pause AI workload; inspect coolant supply cold plate."
+                s_base, "Critical", "Thermal.1.0.CoolantLeakDetected",
+                f"Liquid cooling leak detection loop #{storm_idx + 1} resistance dropped below threshold at CDU manifold.",
+                [str(storm_idx + 1), "CDU manifold"],
+                "/redfish/v1/Chassis/dc1-row02-rack04/ThermalSubsystem/LeakDetection/Tape2",
+                "Row-02", "Rack-04", "CDU-Rack04", "U01-U04", "DirectLiquidCooling",
+                "Dispatch facilities technician immediately. Inspect quick-disconnect valves and manifold joints in Rack-04."
             ))
-            if gpu_idx in (2, 3, 5):
+            events.append(make_event(
+                s_base + timedelta(seconds=12), "Warning", "Sensor.1.0.CoolantPressureLow",
+                "CDU secondary supply pressure dropped to 0.78 bar. Flow rate declining.",
+                ["0.78 bar"],
+                "/redfish/v1/Chassis/dc1-row02-rack04/ThermalSubsystem/Sensors/CDU_Pressure",
+                "Row-02", "Rack-04", "CDU-Rack04", "U01-U04", "DirectLiquidCooling",
+                "Verify pump variable frequency drive status and check expansion reservoir level."
+            ))
+            for i in range(alerts_per_storm - 2):
+                sec = 20 + i * 3
+                node_num = (i % 3) + 1
+                gpu_id = i % 8
+                temp = 94 + (i % 7)
+                sev = "Critical" if temp >= 98 else "Warning"
+                msg_id = "Oem.Nvidia.GpuJunctionThermalThresholdExceeded" if i % 4 != 0 else "Oem.Nvidia.XidError"
+                msg = (f"GPU {gpu_id} (SXM5 H100) HBM3 temperature reached {temp}C."
+                       if "Thermal" in msg_id else
+                       f"GPU {gpu_id} reported fatal XID 79: GPU fell off the bus due to thermal trip.")
                 events.append(make_event(
-                    g_time + timedelta(seconds=8), "Critical", "Oem.Nvidia.XidError",
-                    f"GPU {gpu_idx} reported fatal XID 79: GPU has fallen off the PCIe bus due to thermal trip.",
-                    [str(gpu_idx), "79", "GPU has fallen off the bus"],
-                    f"/redfish/v1/Systems/{uri_part}/LogServices/EventLog/Entries/XID79_GPU{gpu_idx}",
-                    "Row-02", "Rack-04", chassis, slot, "AI-Accelerator",
-                    "Isolate node in Kubernetes cluster and schedule cold plate hardware service."
+                    s_base + timedelta(seconds=sec), sev, msg_id, msg,
+                    [str(gpu_id), f"{temp}C"],
+                    f"/redfish/v1/Systems/dc1-row02-rack04-node0{node_num}/Processors/GPU{gpu_id}/ThermalMetrics",
+                    "Row-02", "Rack-04", f"HGX-H100-Node0{node_num}", f"U{12 + node_num * 6}", "AI-Accelerator",
+                    "Throttle AI workload and inspect cold plate supply delta."
                 ))
 
-        # Fan tray boost
-        events.append(make_event(
-            node_t + timedelta(seconds=40), "Warning", "Thermal.1.0.FanBoostEngaged",
-            f"Fan Tray in {chassis} boosted to 100% PWM emergency acoustic maximum in response to coolant loop failure.",
-            [chassis, "100%"],
-            f"/redfish/v1/Chassis/{uri_part}/Thermal/Fans",
-            "Row-02", "Rack-04", chassis, slot, "Cooling",
-            "Acoustic threshold exceeded. Hearing protection required in Row-02."
-        ))
+        elif storm_type == 1:
+            # Intelligent ePDU Branch Circuit Breaker Trip Cascade (Rack-08)
+            events.append(make_event(
+                s_base, "Critical", "Power.1.0.BranchCircuitBreakerTripped",
+                f"Intelligent ePDU-A Branch Circuit 2 breaker tripped open. RMS current dropped to 0.0A instantaneously.",
+                ["Branch Circuit 2", "0.0A"],
+                "/redfish/v1/Chassis/dc1-row01-rack08/PowerSubsystem/Outlets/Branch2",
+                "Row-01", "Rack-08", "ePDU-A-Left", "0U-Left", "Power",
+                "Inspect Rack-08 ePDU-A branch 2 for short circuit before resetting breaker."
+            ))
+            for i in range(alerts_per_storm - 1):
+                sec = 2 + i * 2
+                sled_num = (i % 14) + 1
+                sub_ev = i % 3
+                if sub_ev == 0:
+                    mid = "Power.1.0.PowerSupplyLostACInput"
+                    msg = f"Power Supply 1 (PSU1) AC input lost on ComputeServer-{sled_num:02d}. Failover to Feed-B active."
+                    sev = "Warning"
+                elif sub_ev == 1:
+                    mid = "Power.1.0.ChassisPowerRedundancyLost"
+                    msg = f"ComputeServer-{sled_num:02d} power redundancy transitioned to NonRedundant (1+0)."
+                    sev = "Warning"
+                else:
+                    mid = "Sensor.1.0.CurrentDrawSurge"
+                    msg = f"Power Supply 2 (PSU2) on ComputeServer-{sled_num:02d} current draw surged to 9.2A on Feed-B."
+                    sev = "Warning"
+                events.append(make_event(
+                    s_base + timedelta(seconds=sec), sev, mid, msg,
+                    [f"ComputeServer-{sled_num:02d}"],
+                    f"/redfish/v1/Chassis/dc1-row01-rack08-node{sled_num:02d}/PowerSubsystem/PowerSupplies/PSU1",
+                    "Row-01", "Rack-08", f"ComputeServer-{sled_num:02d}", f"U{sled_num * 2:02d}", "Power",
+                    "Restore Feed-A AC input to re-establish N+1 power redundancy."
+                ))
 
-    # Fill additional coolant loop & telemetry warnings
-    for i in range(50):
-        c_time = t1 + timedelta(seconds=70 + i * 4)
-        events.append(make_event(
-            c_time, "Warning", "Thermal.1.0.CoolantTempDifferentialHigh",
-            f"CDU return temperature delta exceeded 14.2C across manifold segment #{i % 6 + 1}.",
-            [str(i % 6 + 1), "14.2C"],
-            f"/redfish/v1/Chassis/dc1-row02-rack04/ThermalSubsystem/Sensors/CDU_Delta_{i}",
-            "Row-02", "Rack-04", "CDU-Rack04", "U01-U04", "DirectLiquidCooling",
-            "Check secondary cooling loop balance."
-        ))
+        elif storm_type == 2:
+            # Optical Transceiver Flap Storm (Rack-12)
+            events.append(make_event(
+                s_base, "Warning", "NetworkPort.1.0.OpticalPowerBelowThreshold",
+                "Port 1/1 QSFP28 transceiver optical RX power dropped to -18.9 dBm (lower alarm threshold -14.0 dBm).",
+                ["1/1", "-18.9 dBm"],
+                "/redfish/v1/NetworkAdapters/dc1-row03-rack12-sw01/NetworkPorts/1_1/Optical",
+                "Row-03", "Rack-12", "ToR-Switch-01", "U41-U42", "Network",
+                "Inspect and clean LC optical connector; check fiber bend radius in cable tray."
+            ))
+            for i in range(alerts_per_storm - 1):
+                sec = 5 + i * 3
+                state = "Down" if i % 2 == 0 else "Up"
+                sev = "Critical" if state == "Down" else "OK"
+                port_idx = (i % 4) + 1
+                events.append(make_event(
+                    s_base + timedelta(seconds=sec), sev, f"NetworkPort.1.0.LinkStatus{state}",
+                    f"Port 1/{port_idx} operational link state changed to {state}. 100GbE carrier lost/restored.",
+                    [f"1/{port_idx}", state],
+                    f"/redfish/v1/NetworkAdapters/dc1-row03-rack12-sw01/NetworkPorts/1_{port_idx}",
+                    "Row-03", "Rack-12", "ToR-Switch-01", "U41-U42", "Network",
+                    "Replace QSFP28 optical transceiver if flapping persists."
+                ))
 
-    # =========================================================================
-    # STORM 2: Rack-08 Intelligent ePDU-A Branch Circuit Breaker Trip (150 alerts)
-    # Starts at 07:20:00
-    # =========================================================================
-    t2 = base_time + timedelta(hours=1, minutes=20)
-    # Root: ePDU Breaker Trip
-    events.append(make_event(
-        t2, "Critical", "Power.1.0.BranchCircuitBreakerTripped",
-        "Intelligent ePDU-A Branch Circuit 2 breaker tripped open. RMS current dropped from 28.4A to 0.0A instantaneously.",
-        ["Branch Circuit 2", "28.4A", "0.0A"],
-        "/redfish/v1/Chassis/dc1-row01-rack08/PowerSubsystem/Outlets/Branch2",
-        "Row-01", "Rack-08", "ePDU-A-Left", "0U-Left", "Power",
-        "Inspect Rack-08 ePDU-A branch 2 for short circuit before resetting breaker."
-    ))
+        elif storm_type == 3:
+            # Host Memory Multi-Bit ECC Storm (Rack-02)
+            events.append(make_event(
+                s_base, "Critical", "Memory.1.0.UncorrectableECCError",
+                "Uncorrectable multi-bit ECC error detected in CPU1 DIMM Slot A3 at physical address 0x7FFA80210000.",
+                ["CPU1_DIMM_A3", "0x7FFA80210000"],
+                "/redfish/v1/Systems/dc1-row02-rack02-node07/Memory/CPU1_DIMM_A3",
+                "Row-02", "Rack-02", "ComputeServer-07", "U20-U21", "ComputeHost",
+                "Replace defective DDR5 DIMM in CPU1 DIMM Slot A3."
+            ))
+            for i in range(alerts_per_storm - 1):
+                sec = 1 + i * 2
+                dimm_slot = f"CPU1_DIMM_A{i % 4 + 1}"
+                events.append(make_event(
+                    s_base + timedelta(seconds=sec), "Warning", "Memory.1.0.CorrectableECCThresholdExceeded",
+                    f"DIMM Socket {dimm_slot} correctable ECC rate exceeded threshold: {300 + i * 15} errors/min.",
+                    [dimm_slot, str(300 + i * 15)],
+                    f"/redfish/v1/Systems/dc1-row02-rack02-node07/Memory/{dimm_slot}",
+                    "Row-02", "Rack-02", "ComputeServer-07", "U20-U21", "ComputeHost",
+                    "Monitor memory channel error rates."
+                ))
 
-    # Cascade: PSU1 AC input lost across 14 compute sleds in Rack-08
-    for s_idx in range(1, 15):
-        sled_time = t2 + timedelta(seconds=2 + s_idx)
-        sled_name = f"ComputeServer-{s_idx:02d}"
-        sled_uri = f"dc1-row01-rack08-node{s_idx:02d}"
-        u_slot = f"U{s_idx * 2:02d}-U{s_idx * 2 + 1:02d}"
-        events.append(make_event(
-            sled_time, "Warning", "Power.1.0.PowerSupplyLostACInput",
-            f"Power Supply 1 (PSU1) AC input lost on {sled_name}. Automatic failover to PSU2 (Feed-B) active.",
-            ["PSU1", "Feed-B"],
-            f"/redfish/v1/Chassis/{sled_uri}/PowerSubsystem/PowerSupplies/PSU1",
-            "Row-01", "Rack-08", sled_name, u_slot, "Power",
-            "Check Feed-A upstream breaker status; sled running with N-1 power redundancy."
-        ))
-        events.append(make_event(
-            sled_time + timedelta(seconds=1), "Warning", "Power.1.0.ChassisPowerRedundancyLost",
-            f"{sled_name} redundancy mode transitioned from FullyRedundant (2+0) to NonRedundant (1+0).",
-            ["FullyRedundant", "NonRedundant"],
-            f"/redfish/v1/Chassis/{sled_uri}/PowerSubsystem",
-            "Row-01", "Rack-08", sled_name, u_slot, "Power",
-            "Restore Feed-A AC input immediately to re-establish N+1 power redundancy."
-        ))
-        # Feed-B current surge
-        events.append(make_event(
-            sled_time + timedelta(seconds=3), "Warning", "Sensor.1.0.CurrentDrawSurge",
-            f"Power Supply 2 (PSU2) on {sled_name} current draw surged to 8.9A on Feed-B.",
-            ["PSU2", "8.9A"],
-            f"/redfish/v1/Chassis/{sled_uri}/PowerSubsystem/PowerSupplies/PSU2/CurrentSensor",
-            "Row-01", "Rack-08", sled_name, u_slot, "Power",
-            "Monitor Feed-B total ampacity to avoid secondary overload."
-        ))
+        elif storm_type == 4:
+            # Storage Array NVMe Drive Wear-Out & RAID Parity Rebuild (Rack-05)
+            events.append(make_event(
+                s_base, "Critical", "Storage.1.0.VolumeDegraded",
+                "Storage Pool 'Vol-Tier0-Array2' RAID-6 array state transitioned from Optimal to Degraded.",
+                ["Vol-Tier0-Array2", "RAID-6", "Degraded"],
+                "/redfish/v1/Systems/dc1-row03-rack05-storage02/Storage/1/Volumes/Vol0",
+                "Row-03", "Rack-05", "StorageArray-02", "U15-U18", "Storage",
+                "Complete hot-spare drive parity rebuild."
+            ))
+            for i in range(alerts_per_storm - 1):
+                sec = 3 + i * 4
+                progress = min(100, int((i / (alerts_per_storm - 1)) * 100))
+                events.append(make_event(
+                    s_base + timedelta(seconds=sec), "Warning", "Storage.1.0.RebuildProgress",
+                    f"Hot-spare Bay 24 parity rebuild in progress: {progress}% completed. IOPS throughput throttled.",
+                    ["Bay 24", f"{progress}%"],
+                    "/redfish/v1/Systems/dc1-row03-rack05-storage02/Storage/1",
+                    "Row-03", "Rack-05", "StorageArray-02", "U15-U18", "Storage",
+                    "Monitor parity rebuild completion."
+                ))
 
-    # Additional power phase telemetry alerts
-    for p_idx in range(60):
-        pt = t2 + timedelta(seconds=20 + p_idx * 2)
-        events.append(make_event(
-            pt, "Warning", "Power.1.0.PhaseUnbalanceWarning",
-            f"ePDU-A Phase L1/L2 load imbalance reached 34% following Branch 2 trip.",
-            ["Phase L1/L2", "34%"],
-            f"/redfish/v1/Chassis/dc1-row01-rack08/PowerSubsystem/Phases/Phase_{p_idx % 3}",
-            "Row-01", "Rack-08", "ePDU-A-Left", "0U-Left", "Power",
-            "Rebalance branch circuit phases across Rack-08."
-        ))
-
-    # =========================================================================
-    # STORM 3: Optical Degradation & Link Flap on Rack-12 ToR-Switch (110 alerts)
-    # Starts at 08:30:00
-    # =========================================================================
-    t3 = base_time + timedelta(hours=2, minutes=30)
-    # Root: Transceiver RX power breach
-    events.append(make_event(
-        t3, "Warning", "NetworkPort.1.0.OpticalPowerBelowThreshold",
-        "Port 1/1 QSFP28 transceiver optical RX power dropped to -18.4 dBm (lower alarm threshold -14.0 dBm).",
-        ["1/1", "QSFP28", "-18.4 dBm", "-14.0 dBm"],
-        "/redfish/v1/NetworkAdapters/dc1-row03-rack12-sw01/NetworkPorts/1_1/Optical",
-        "Row-03", "Rack-12", "ToR-Switch-01", "U41-U42", "Network",
-        "Inspect and clean LC optical connector; check fiber bend radius in cable tray."
-    ))
-
-    # Flapping link events
-    for flap_idx in range(25):
-        f_time = t3 + timedelta(seconds=10 + flap_idx * 6)
-        state = "Down" if flap_idx % 2 == 0 else "Up"
-        sev = "Critical" if state == "Down" else "OK"
-        events.append(make_event(
-            f_time, sev, f"NetworkPort.1.0.LinkStatus{state}",
-            f"Port 1/1 operational link state changed to {state}. 100GbE link carrier lost/restored.",
-            ["1/1", state, "100GbE"],
-            "/redfish/v1/NetworkAdapters/dc1-row03-rack12-sw01/NetworkPorts/1_1",
-            "Row-03", "Rack-12", "ToR-Switch-01", "U41-U42", "Network",
-            "Module experiencing physical layer signal loss. Replace QSFP28 optical transceiver."
-        ))
-
-    # Dependent host NIC failovers
-    for h in range(1, 10):
-        h_time = t3 + timedelta(seconds=30 + h * 4)
-        events.append(make_event(
-            h_time, "Warning", "NetworkInterface.1.0.BondMemberDown",
-            f"ComputeServer-{h:02d} bond0 interface detected link loss on primary member eno1; failed over to secondary eno2.",
-            ["bond0", "eno1", "eno2"],
-            f"/redfish/v1/Systems/dc1-row03-rack12-node{h:02d}/NetworkInterfaces/bond0",
-            "Row-03", "Rack-12", f"ComputeServer-{h:02d}", f"U{h * 3:02d}", "Network",
-            "Verify uplink path to ToR-Switch-01."
-        ))
-
-    for b in range(50):
-        bt = t3 + timedelta(seconds=80 + b * 2)
-        events.append(make_event(
-            bt, "Warning", "Network.1.0.FcsErrorRateHigh",
-            f"Port 1/{b % 8 + 1} FCS CRC error rate exceeded 120 errors/sec.",
-            [f"1/{b % 8 + 1}", "120 errors/sec"],
-            f"/redfish/v1/NetworkAdapters/dc1-row03-rack12-sw01/NetworkPorts/1_{b % 8 + 1}",
-            "Row-03", "Rack-12", "ToR-Switch-01", "U41-U42", "Network",
-            "Check fiber optic patch lead for particulate contamination."
-        ))
+        else:
+            # Environmental Rack Inlet & CPU PROCHOT Cascades (Rack-01)
+            events.append(make_event(
+                s_base, "Warning", "Environmental.1.0.RackInletExceedsEnvelope",
+                "Rack-01 environmental inlet sensor reported 32.1C (ASHRAE A2 recommended threshold 27.0C).",
+                ["Rack-01", "32.1C", "27.0C"],
+                "/redfish/v1/Chassis/dc1-row01-rack01/ThermalSubsystem/Sensors/InletTemp1",
+                "Row-01", "Rack-01", "RackFrame-01", "Top-Inlet", "Environmental",
+                "Inspect cold aisle containment doors and verify CRAH unit #4 supply airflow."
+            ))
+            for i in range(alerts_per_storm - 1):
+                sec = 4 + i * 3
+                core_id = i % 32
+                events.append(make_event(
+                    s_base + timedelta(seconds=sec), "Warning", "Processor.1.0.CorePerformanceDegraded",
+                    f"Core {core_id} frequency capped at 1.40GHz due to thermal throttling event on ComputeServer-12.",
+                    [str(core_id), "1.40GHz"],
+                    f"/redfish/v1/Systems/dc1-row04-rack01-node12/Processors/CPU1/Cores/{core_id}",
+                    "Row-04", "Rack-01", "ComputeServer-12", "U05-U06", "ComputeHost",
+                    "Monitor CPU workload thermal delta."
+                ))
 
     # =========================================================================
-    # STORM 4: Host Fatal Memory Crash (Uncorrectable ECC) on Server-07 (80 alerts)
-    # Starts at 09:45:00
+    # BACKGROUND TELEMETRY NOISE (distributed evenly across the 24-hour horizon)
+    # Staged firmware updates, normal link recoveries, sensor audits, logins,
+    # NTP syncs, energy telemetry
     # =========================================================================
-    t4 = base_time + timedelta(hours=3, minutes=45)
-    # Correctable error bursts
-    for c_err in range(15):
-        ct = t4 + timedelta(seconds=c_err * 2)
-        events.append(make_event(
-            ct, "Warning", "Memory.1.0.CorrectableECCThresholdExceeded",
-            f"DIMM Socket CPU1_DIMM_A3 correctable ECC rate exceeded threshold: {250 + c_err * 30} errors/min.",
-            ["CPU1_DIMM_A3", f"{250 + c_err * 30}"],
-            "/redfish/v1/Systems/dc1-row02-rack02-node07/Memory/CPU1_DIMM_A3",
-            "Row-02", "Rack-02", "ComputeServer-07", "U20-U21", "ComputeHost",
-            "Schedule proactive DIMM replacement during next maintenance window."
-        ))
-
-    # Root: Uncorrectable ECC crash
-    t4_crash = t4 + timedelta(seconds=35)
-    events.append(make_event(
-        t4_crash, "Critical", "Memory.1.0.UncorrectableECCError",
-        "Uncorrectable multi-bit ECC error detected in CPU1 DIMM Slot A3 at physical address 0x7FFA80210000.",
-        ["CPU1_DIMM_A3", "0x7FFA80210000"],
-        "/redfish/v1/Systems/dc1-row02-rack02-node07/Memory/CPU1_DIMM_A3",
-        "Row-02", "Rack-02", "ComputeServer-07", "U20-U21", "ComputeHost",
-        "Replace defective DDR5 DIMM in CPU1 DIMM Slot A3."
-    ))
-
-    # Machine check exception & emergency NMI reboot
-    events.append(make_event(
-        t4_crash + timedelta(seconds=2), "Critical", "Host.1.0.MachineCheckException",
-        "Fatal hardware Machine Check Exception (MCE) on core 14. Emergency NMI reboot initiated.",
-        ["core 14", "NMI reboot"],
-        "/redfish/v1/Systems/dc1-row02-rack02-node07/LogServices/EventLog/Entries/MCE01",
-        "Row-02", "Rack-02", "ComputeServer-07", "U20-U21", "ComputeHost",
-        "Check system event log and quarantine host from cluster."
-    ))
-
-    for post_idx in range(60):
-        pt = t4_crash + timedelta(seconds=10 + post_idx * 3)
-        events.append(make_event(
-            pt, "Warning", "System.1.0.POSTMemoryCheckWarning",
-            f"BIOS POST memory training test report: rank {post_idx % 4} marginalized on channel A.",
-            [f"rank {post_idx % 4}", "channel A"],
-            "/redfish/v1/Systems/dc1-row02-rack02-node07/Memory/ChannelA",
-            "Row-02", "Rack-02", "ComputeServer-07", "U20-U21", "ComputeHost",
-            "Run extended memory BIST diagnostics."
-        ))
-
-    # =========================================================================
-    # STORM 5: Storage Array NVMe Drive Failure & RAID-6 Degradation (100 alerts)
-    # Starts at 11:10:00
-    # =========================================================================
-    t5 = base_time + timedelta(hours=5, minutes=10)
-    events.append(make_event(
-        t5, "Warning", "Drive.1.0.DrivePredictiveFailure",
-        "NVMe U.2 SSD in Bay 7 SMART status reported available spare block threshold breach (4% remaining).",
-        ["Bay 7", "4%"],
-        "/redfish/v1/Chassis/dc1-row03-rack05-storage02/Drives/DriveBay7",
-        "Row-03", "Rack-05", "StorageArray-02", "U15-U18", "Storage",
-        "Stage replacement 15.36TB NVMe drive. Initiate proactive copy."
-    ))
-
-    events.append(make_event(
-        t5 + timedelta(seconds=15), "Critical", "Storage.1.0.VolumeDegraded",
-        "Storage Pool 'Vol-Tier0-Array2' RAID-6 array state transitioned from Optimal to Degraded.",
-        ["Vol-Tier0-Array2", "RAID-6", "Degraded"],
-        "/redfish/v1/Systems/dc1-row03-rack05-storage02/Storage/1/Volumes/Vol0",
-        "Row-03", "Rack-05", "StorageArray-02", "U15-U18", "Storage",
-        "Array parity protection at N-1. Complete drive replacement to rebuild parity."
-    ))
-
-    for rb in range(98):
-        rt = t5 + timedelta(seconds=30 + rb * 5)
-        events.append(make_event(
-            rt, "Warning", "Storage.1.0.RebuildProgress",
-            f"Hot-spare Bay 24 parity rebuild in progress: {rb + 1}% completed. IOPS throughput throttled.",
-            ["Bay 24", f"{rb + 1}%"],
-            "/redfish/v1/Systems/dc1-row03-rack05-storage02/Storage/1",
-            "Row-03", "Rack-05", "StorageArray-02", "U15-U18", "Storage",
-            "Monitor parity rebuild completion."
-        ))
-
-    # =========================================================================
-    # STORM 6: Rack Inlet Environmental Thermal Breach (80 alerts)
-    # Starts at 12:45:00
-    # =========================================================================
-    t6 = base_time + timedelta(hours=6, minutes=45)
-    events.append(make_event(
-        t6, "Warning", "Environmental.1.0.RackInletExceedsEnvelope",
-        "Rack-01 environmental inlet sensor reported 31.5C (ASHRAE A2 recommended threshold 27.0C).",
-        ["Rack-01", "31.5C", "27.0C"],
-        "/redfish/v1/Chassis/dc1-row01-rack01/ThermalSubsystem/Sensors/InletTemp1",
-        "Row-01", "Rack-01", "RackFrame-01", "Top-Inlet", "Environmental",
-        "Inspect cold aisle containment doors and verify CRAH unit #4 supply airflow."
-    ))
-
-    for s_temp in range(79):
-        st = t6 + timedelta(seconds=10 + s_temp * 4)
-        c_temp = 28.5 + (s_temp % 5) * 0.8
-        events.append(make_event(
-            st, "Warning", "Sensor.1.0.TemperatureThresholdExceeded",
-            f"Server intake temperature sensor #{s_temp % 6 + 1} reached {c_temp:.1f}C.",
-            [f"#{s_temp % 6 + 1}", f"{c_temp:.1f}C"],
-            f"/redfish/v1/Chassis/dc1-row01-rack01/Sensors/Intake_{s_temp % 6 + 1}",
-            "Row-01", "Rack-01", "RackFrame-01", "U10-U30", "Environmental",
-            "Verify perforated floor tile alignment."
-        ))
-
-    # =========================================================================
-    # STORM 7: CPU 1 PROCHOT Thermal Throttling Cascade in Rack-01 (80 alerts)
-    # Starts at 14:15:00
-    # =========================================================================
-    t7 = base_time + timedelta(hours=8, minutes=15)
-    events.append(make_event(
-        t7, "Warning", "Processor.1.0.ProcessorThrottled",
-        "CPU 1 VRM temperature exceeded 105C on ComputeServer-12. PROCHOT frequency clamping engaged (1400MHz).",
-        ["CPU 1", "105C", "1400MHz"],
-        "/redfish/v1/Systems/dc1-row04-rack01-node12/Processors/CPU1/Thermal",
-        "Row-04", "Rack-01", "ComputeServer-12", "U05-U06", "ComputeHost",
-        "Inspect chassis airflow and air baffle alignment in Rack-01."
-    ))
-
-    for th in range(79):
-        th_t = t7 + timedelta(seconds=5 + th * 4)
-        events.append(make_event(
-            th_t, "Warning", "Processor.1.0.CorePerformanceDegraded",
-            f"Core {th % 32} frequency capped at 1.40GHz due to thermal throttling event on ComputeServer-12.",
-            [str(th % 32), "1.40GHz"],
-            f"/redfish/v1/Systems/dc1-row04-rack01-node12/Processors/CPU1/Cores/{th % 32}",
-            "Row-04", "Rack-01", "ComputeServer-12", "U05-U06", "ComputeHost",
-            "Monitor CPU workload thermal delta."
-        ))
-
-    # =========================================================================
-    # STORM 8: Secondary Power Domain ePDU-B Transient Voltage SAG (90 alerts)
-    # Starts at 15:30:00
-    # =========================================================================
-    t8 = base_time + timedelta(hours=9, minutes=30)
-    events.append(make_event(
-        t8, "Warning", "Power.1.0.VoltageBelowThreshold",
-        "Intelligent ePDU-B input voltage dropped to 198V AC (nominal 208V AC +/- 5%).",
-        ["ePDU-B", "198V AC", "208V AC"],
-        "/redfish/v1/Chassis/dc1-row01-rack08/PowerSubsystem/Outlets/FeedB_Main",
-        "Row-01", "Rack-08", "ePDU-B-Right", "0U-Right", "Power",
-        "Check utility transformer tap and UPS-B secondary bypass feed."
-    ))
-
-    for v in range(89):
-        vt = t8 + timedelta(seconds=2 + v * 3)
-        events.append(make_event(
-            vt, "Warning", "Power.1.0.InputVoltageSagWarning",
-            f"PSU2 on Sled #{v % 14 + 1} recorded transient voltage sag of 199V for 42ms.",
-            [f"Sled #{v % 14 + 1}", "199V", "42ms"],
-            f"/redfish/v1/Chassis/dc1-row01-rack08-node{v % 14 + 1:02d}/PowerSubsystem/PowerSupplies/PSU2",
-            "Row-01", "Rack-08", f"ComputeServer-{v % 14 + 1:02d}", "U02-U30", "Power",
-            "Power supply holdup capacitor maintained bus regulation. Informational."
-        ))
-
-    # =========================================================================
-    # BACKGROUND TELEMETRY NOISE (remaining alerts to reach exactly 1,000)
-    # Staged firmware updates, normal link recoveries, sensor audits, logins
-    # =========================================================================
-    remaining = 1000 - len(events)
-    noise_start = base_time
-    noise_window = 12 * 3600  # 12 hours
+    remaining = total_count - len(events)
+    total_seconds = duration_hours * 3600
 
     noise_templates = [
         ("OK", "Update.1.0.FirmwareUpdateStaged",
@@ -424,15 +258,19 @@ def generate_1000_alerts():
          ["thermistor"], "Environmental", "Nominal calibration status."),
         ("OK", "Power.1.0.EnergyReportLogged",
          "Hourly rack energy accumulation: 14.82 kWh recorded. Efficiency PUE index 1.12.",
-         ["14.82 kWh", "1.12"], "Power", "Nominal telemetry log.")
+         ["14.82 kWh", "1.12"], "Power", "Nominal telemetry log."),
+        ("OK", "Time.1.0.NTPSynchronizationAchieved",
+         "Chassis real-time clock synchronized with stratum 1 NTP reference server 10.0.0.12 (jitter 0.12ms).",
+         ["10.0.0.12", "0.12ms"], "Management", "Time source nominal."),
+        ("OK", "Thermal.1.0.FanTachometerNormal",
+         "Fan tray tachometer reading stabilized at 4,800 RPM (nominal operating zone).",
+         ["4800 RPM"], "Cooling", "Nominal cooling telemetry.")
     ]
 
-    racks = ["Rack-01", "Rack-02", "Rack-04", "Rack-05", "Rack-08", "Rack-10", "Rack-12", "Rack-15"]
-    rows = ["Row-01", "Row-02", "Row-03", "Row-04"]
-
     for i in range(remaining):
-        sec_offset = int((i / remaining) * noise_window) + (i % 7)
-        noise_dt = noise_start + timedelta(seconds=sec_offset)
+        # Evenly spread over 24 hours with small sub-second jitter
+        sec_offset = int((i / remaining) * total_seconds)
+        noise_dt = base_time + timedelta(seconds=sec_offset)
         template = noise_templates[i % len(noise_templates)]
         rack = racks[i % len(racks)]
         row = rows[i % len(rows)]
@@ -450,35 +288,48 @@ def generate_1000_alerts():
             template[5]
         ))
 
-    # Sort all events chronologically
+    # Sort all events strictly by Timestamp
     events.sort(key=lambda x: x["Timestamp"])
 
-    # Re-index event IDs sequentially EVT-20260908-0001 through EVT-20260908-1000
+    # Re-index EventId sequentially from 1 to total_count with zero padding
+    pad = 5 if total_count >= 10000 else 4
     for idx, e in enumerate(events, start=1):
-        e["EventId"] = f"EVT-20260908-{idx:04d}"
+        e["EventId"] = f"EVT-20260908-{idx:0{pad}d}"
 
     dataset = {
         "$schema": "http://redfish.dmtf.org/schemas/v1/Event.v1_7_0.json",
-        "Id": "dc1-telemetry-synthetic-1000-batch",
-        "Name": "Data Center High-Density Synthetic Redfish Alert Batch (1,000 Events)",
-        "Description": "1,000 realistic DMTF Redfish alerts covering cascading multi-domain failures (cooling loop leak, breaker trip, optical flapping, ECC storms, storage wear) plus background noise",
+        "Id": f"dc1-telemetry-synthetic-{total_count}-batch",
+        "Name": f"Data Center High-Density Synthetic Redfish Alert Batch ({total_count:,} Events)",
+        "Description": f"{total_count:,} realistic DMTF Redfish alerts covering cascading multi-domain failures across a {duration_hours}-hour period plus background noise",
         "TotalCount": len(events),
+        "TimeRange": {
+            "Start": events[0]["Timestamp"],
+            "End": events[-1]["Timestamp"],
+            "DurationHours": duration_hours
+        },
         "GeneratedAt": datetime.now(timezone.utc).isoformat(),
         "Events": events
     }
 
-    OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
-    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
+    output_file.parent.mkdir(parents=True, exist_ok=True)
+    with open(output_file, "w", encoding="utf-8") as f:
         json.dump(dataset, f, indent=2)
 
-    print(f"Successfully generated {len(events)} synthetic Redfish alerts to {OUTPUT_FILE}")
-    print(f"Time range: {events[0]['Timestamp']} to {events[-1]['Timestamp']}")
+    print(f"Successfully generated {len(events):,} synthetic Redfish alerts to {output_file}")
+    print(f"Time range: {events[0]['Timestamp']} to {events[-1]['Timestamp']} ({duration_hours} hours)")
 
-    # Print summary stats
     crit = sum(1 for e in events if e["Severity"] == "Critical")
     warn = sum(1 for e in events if e["Severity"] == "Warning")
     ok = sum(1 for e in events if e["Severity"] == "OK")
-    print(f"Severities: Critical={crit}, Warning={warn}, OK={ok}")
+    print(f"Severities: Critical={crit:,}, Warning={warn:,}, OK={ok:,}")
+    return output_file
 
 if __name__ == "__main__":
-    generate_1000_alerts()
+    parser = argparse.ArgumentParser(description="Generate synthetic Redfish telemetry dataset")
+    parser.add_argument("--count", type=int, default=10000, help="Number of alerts to generate (default: 10000)")
+    parser.add_argument("--hours", type=int, default=24, help="Duration in hours to spread timestamps over (default: 24)")
+    parser.add_argument("--output", type=str, default=None, help="Custom output JSON path")
+    args = parser.parse_args()
+
+    out_path = Path(args.output) if args.output else None
+    generate_dataset(total_count=args.count, duration_hours=args.hours, output_file=out_path)

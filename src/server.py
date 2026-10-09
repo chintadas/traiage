@@ -10,6 +10,7 @@ from src.models import RedfishAlert, AlertStats
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_PATH = BASE_DIR / "data" / "seed_alerts.json"
 SYNTHETIC_DATA_PATH = BASE_DIR / "data" / "synthetic_1000_alerts.json"
+SYNTHETIC_10000_DATA_PATH = BASE_DIR / "data" / "synthetic_10000_alerts.json"
 PUBLIC_DIR = BASE_DIR / "public"
 
 DATASETS = {
@@ -24,6 +25,12 @@ DATASETS = {
         "name": "Synthetic Dataset (1,000 Alerts)",
         "path": SYNTHETIC_DATA_PATH,
         "description": "High-density cascaded failure storms (cooling leak, breaker trip, ToR flap, ECC crash, NVMe rebuild) + background noise"
+    },
+    "synthetic_10000": {
+        "id": "synthetic_10000",
+        "name": "Synthetic Dataset (10,000 Alerts / 24h)",
+        "path": SYNTHETIC_10000_DATA_PATH,
+        "description": "High-density multi-domain cascaded failure storms spread over a 24-hour telemetry window plus background operational noise"
     }
 }
 
