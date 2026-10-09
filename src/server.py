@@ -9,7 +9,29 @@ from src.models import RedfishAlert, AlertStats
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_PATH = BASE_DIR / "data" / "seed_alerts.json"
+SYNTHETIC_DATA_PATH = BASE_DIR / "data" / "synthetic_1000_alerts.json"
 PUBLIC_DIR = BASE_DIR / "public"
+
+DATASETS = {
+    "seed_20": {
+        "id": "seed_20",
+        "name": "Seed Dataset (20 Alerts)",
+        "path": DATA_PATH,
+        "description": "Baseline curated telemetry covering 8 core data center incidents"
+    },
+    "synthetic_1000": {
+        "id": "synthetic_1000",
+        "name": "Synthetic Dataset (1,000 Alerts)",
+        "path": SYNTHETIC_DATA_PATH,
+        "description": "High-density cascaded failure storms (cooling leak, breaker trip, ToR flap, ECC crash, NVMe rebuild) + background noise"
+    }
+}
+
+active_dataset_id = "seed_20"
+
+def get_active_dataset_path() -> Path:
+    entry = DATASETS.get(active_dataset_id, DATASETS["seed_20"])
+    return entry["path"]
 
 app = FastAPI(
     title="Data Center Alert Triage API",
@@ -33,9 +55,10 @@ async def no_cache_static(request, call_next):
     return response
 
 def load_seed_alerts() -> List[dict]:
-    if not DATA_PATH.exists():
+    p = get_active_dataset_path()
+    if not p.exists():
         return []
-    with open(DATA_PATH, "r", encoding="utf-8") as f:
+    with open(p, "r", encoding="utf-8") as f:
         data = json.load(f)
         return data.get("Events", [])
 
@@ -147,8 +170,54 @@ from pydantic import BaseModel
 class IncidentStatusUpdate(BaseModel):
     status: str
 
+class DatasetSwitchRequest(BaseModel):
+    dataset: str
+
 # Shared in-memory engine instance
-triage_engine = TriageEngine()
+triage_engine = TriageEngine(alerts_path=get_active_dataset_path())
+
+@app.get("/api/datasets")
+def get_datasets():
+    results = []
+    for k, v in DATASETS.items():
+        count = 0
+        if v["path"].exists():
+            try:
+                with open(v["path"], "r", encoding="utf-8") as f:
+                    count = len(json.load(f).get("Events", []))
+            except Exception:
+                count = 0
+        results.append({
+            "id": v["id"],
+            "name": v["name"],
+            "count": count,
+            "description": v["description"],
+            "is_active": (v["id"] == active_dataset_id)
+        })
+    return {
+        "active": active_dataset_id,
+        "datasets": results
+    }
+
+@app.post("/api/datasets/active")
+def set_active_dataset(payload: DatasetSwitchRequest):
+    global active_dataset_id, triage_engine
+    if payload.dataset not in DATASETS:
+        raise HTTPException(status_code=400, detail=f"Unknown dataset '{payload.dataset}'")
+    
+    active_dataset_id = payload.dataset
+    target_path = get_active_dataset_path()
+    triage_engine = TriageEngine(alerts_path=target_path)
+    triage_engine.correlate()
+
+    raw_alerts = load_seed_alerts()
+    return {
+        "status": "success",
+        "active": active_dataset_id,
+        "name": DATASETS[active_dataset_id]["name"],
+        "alerts_count": len(raw_alerts),
+        "incidents_count": len(triage_engine.incidents)
+    }
 
 @app.get("/api/incidents")
 def get_incidents(

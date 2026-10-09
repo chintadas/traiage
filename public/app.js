@@ -34,6 +34,9 @@ let searchInput, clearSearchBtn, filterSeverity, filterSubsystem, filterRack, so
 let inspectorDrawer, drawerBackdrop, drawerEventId, drawerContent, closeDrawerBtn, toastNotification;
 let kpiTotal, kpiCritical, kpiWarning, kpiOk, kpiCards;
 
+// DOM Elements: Dataset Switcher
+let datasetSelect;
+
 // DOM Elements: Grouped Incidents
 let kpiIncTotal, kpiIncP1, kpiIncP2, kpiIncP3, kpiIncCards;
 let incSearchInput, clearIncSearchBtn, filterIncPriority, filterIncCategory, filterIncStatus, resetIncFiltersBtn, emptyIncResetBtn;
@@ -100,16 +103,64 @@ function initDomElements() {
   activeIncChipsEl = document.getElementById('activeIncChips');
   incidentsListEl = document.getElementById('incidentsList');
   emptyIncStateEl = document.getElementById('emptyIncState');
+  datasetSelect = document.getElementById('datasetSelect');
 }
 
 // Initialize Application
 async function init() {
   initDomElements();
   setupEventListeners();
+  await loadDatasets();
   await loadStats();
   await loadAlerts();
   await loadIncidents();
   switchView('grouped');
+}
+
+// Load Datasets List
+async function loadDatasets() {
+  if (!datasetSelect) return;
+  try {
+    const res = await fetch('/api/datasets');
+    if (!res.ok) return;
+    const data = await res.json();
+    datasetSelect.innerHTML = data.datasets.map(ds => `
+      <option value="${escapeHtml(ds.id)}" ${ds.is_active ? 'selected' : ''}>
+        ${escapeHtml(ds.name)}
+      </option>
+    `).join('');
+    datasetSelect.value = data.active;
+  } catch (err) {
+    console.error('Failed to load datasets:', err);
+  }
+}
+
+// Switch Dataset
+async function switchDataset(datasetId) {
+  try {
+    showToast('Switching dataset...');
+    const res = await fetch('/api/datasets/active', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dataset: datasetId })
+    });
+    if (!res.ok) throw new Error('Failed to switch dataset');
+    const data = await res.json();
+
+    // Reset filters so user sees complete dataset
+    resetAllFilters();
+    resetAllIncFilters();
+
+    // Refresh telemetry and incidents
+    await loadStats();
+    await loadAlerts();
+    await loadIncidents();
+
+    showToast(`Loaded ${data.name}: ${data.alerts_count} alerts, ${data.incidents_count} incidents`);
+  } catch (err) {
+    console.error('Error switching dataset:', err);
+    showToast('Failed to switch dataset');
+  }
 }
 
 // Load Telemetry Stats
@@ -711,6 +762,13 @@ function resetAllIncFilters() {
 
 // Event Listeners
 function setupEventListeners() {
+  // Dataset Switcher
+  if (datasetSelect) {
+    datasetSelect.addEventListener('change', (e) => {
+      switchDataset(e.target.value);
+    });
+  }
+
   // Tab Switching
   if (tabRawAlerts) {
     tabRawAlerts.addEventListener('click', () => switchView('raw'));

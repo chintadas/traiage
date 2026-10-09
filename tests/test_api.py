@@ -138,3 +138,35 @@ def test_update_incident_status():
     assert fetch_res.status_code == 200
     assert fetch_res.json()["status"] == "Acknowledged"
 
+def test_get_datasets_and_switch():
+    # 1. Fetch datasets list
+    res = client.get("/api/datasets")
+    assert res.status_code == 200
+    d = res.json()
+    assert d["active"] == "seed_20"
+    ids = [x["id"] for x in d["datasets"]]
+    assert "seed_20" in ids
+    assert "synthetic_1000" in ids
+
+    # 2. Switch to synthetic_1000
+    switch_res = client.post("/api/datasets/active", json={"dataset": "synthetic_1000"})
+    assert switch_res.status_code == 200
+    s_data = switch_res.json()
+    assert s_data["active"] == "synthetic_1000"
+    assert s_data["alerts_count"] == 1000
+    assert s_data["incidents_count"] > 10
+
+    # Verify /api/stats reflects 1000 alerts
+    stats_res = client.get("/api/stats")
+    assert stats_res.status_code == 200
+    assert stats_res.json()["total"] == 1000
+
+    # 3. Switch back to seed_20
+    back_res = client.post("/api/datasets/active", json={"dataset": "seed_20"})
+    assert back_res.status_code == 200
+    b_data = back_res.json()
+    assert b_data["active"] == "seed_20"
+    assert b_data["alerts_count"] == 20
+    assert b_data["incidents_count"] == 8
+
+
